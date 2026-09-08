@@ -1,0 +1,492 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ drawing.title }} - SketchForge{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/editor.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="editor-container">
+
+    <!-- MENU BAR -->
+    <div class="menu-bar">
+        <div class="menu-item">
+            Archivo
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="SketchForge.newDrawing()">
+                    Nuevo <span class="shortcut">Ctrl+N</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.saveDrawing()">
+                    Guardar <span class="shortcut">Ctrl+S</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-dropdown-item" onclick="SketchForgeExport.export('png')">
+                    Exportar PNG <span class="shortcut">Ctrl+Shift+E</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForgeExport.export('jpeg')">
+                    Exportar JPEG
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForgeExport.export('webp')">
+                    Exportar WebP
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-dropdown-item" onclick="SketchForgeExport.saveThumbnail()">
+                    Guardar Miniatura
+                </div>
+            </div>
+        </div>
+        <div class="menu-item">
+            Edición
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="SketchForge.undo()">
+                    Deshacer <span class="shortcut">Ctrl+Z</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.redo()">
+                    Rehacer <span class="shortcut">Ctrl+Shift+Z</span>
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-dropdown-item" onclick="SketchForge.clearLayer()">
+                    Limpiar Capa <span class="shortcut">Delete</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item">
+            Ver
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="SketchForge.zoomIn()">
+                    Acercar <span class="shortcut">Ctrl++</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.zoomOut()">
+                    Alejar <span class="shortcut">Ctrl+-</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.zoomFit()">
+                    Ajustar <span class="shortcut">Ctrl+0</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.zoomReset()">
+                    100% <span class="shortcut">Ctrl+1</span>
+                </div>
+            </div>
+        </div>
+        <div class="menu-item">
+            Capa
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="SketchForgeLayers.addLayer()">
+                    Nueva Capa <span class="shortcut">Ctrl+Shift+N</span>
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForgeLayers.deleteActiveLayer()">
+                    Eliminar Capa
+                </div>
+                <div class="menu-divider"></div>
+                <div class="menu-dropdown-item" onclick="SketchForgeLayers.duplicateLayer()">
+                    Duplicar Capa
+                </div>
+            </div>
+        </div>
+        <div class="menu-item">
+            Filtro
+            <div class="menu-dropdown">
+                <div class="menu-dropdown-item" onclick="SketchForge.applyFilter('grayscale')">
+                    Escala de Grises
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.applyFilter('invert')">
+                    Invertir Colores
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.applyFilter('brightness')">
+                    Brillo +
+                </div>
+                <div class="menu-dropdown-item" onclick="SketchForge.applyFilter('blur')">
+                    Desenfoque
+                </div>
+            </div>
+        </div>
+        <div class="menu-bar-title">{{ drawing.title }} @ {{ drawing.width }}x{{ drawing.height }}</div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="toolbar">
+        <!-- Undo/Redo -->
+        <div class="toolbar-group">
+            <button class="tool-btn" id="undoBtn" title="Deshacer (Ctrl+Z)">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <button class="tool-btn" id="redoBtn" title="Rehacer (Ctrl+Shift+Z)">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+
+        <!-- Brush Settings -->
+        <div class="tool-color-group">
+            <div class="color-picker-wrapper">
+                <button class="color-swap" id="colorSwapBtn" title="Intercambiar colores">
+                    <i class="bi bi-arrow交换"></i>
+                </button>
+                <div class="color-picker-fg" id="colorFg" style="background:#000000" title="Color de frente">
+                </div>
+                <div class="color-picker-bg" id="colorBg" style="background:#ffffff" title="Color de fondo">
+                </div>
+                <input type="color" id="brushColor" value="#000000">
+            </div>
+        </div>
+
+        <div class="toolbar-group">
+            <label class="tool-label">
+                <i class="bi bi-circle-fill" style="font-size:10px"></i>
+                Tamaño
+            </label>
+            <input type="range" id="brushSize" min="1" max="200" value="5" class="size-slider">
+            <span id="brushSizeLabel" class="tool-value">5</span>
+        </div>
+
+        <div class="toolbar-group">
+            <label class="tool-label">
+                <i class="bi bi-droplet-half"></i>
+                Opacidad
+            </label>
+            <input type="range" id="brushOpacity" min="1" max="100" value="100" class="size-slider">
+            <span id="brushOpacityLabel" class="tool-value">100%</span>
+        </div>
+
+        <div class="toolbar-group">
+            <label class="tool-label">
+                <i class="bi bi-droplet"></i>
+                Flujo
+            </label>
+            <input type="range" id="brushFlow" min="1" max="100" value="100" class="size-slider">
+            <span id="brushFlowLabel" class="tool-value">100%</span>
+        </div>
+    </div>
+
+    <!-- EDITOR BODY -->
+    <div class="editor-body">
+
+        <!-- LEFT TOOLBOX -->
+        <div class="toolbox-panel">
+            <button class="tool-btn active" data-tool="brush" title="Pincel (B)">
+                <i class="bi bi-brush"></i>
+                <span class="shortcut-hint">B</span>
+            </button>
+            <button class="tool-btn" data-tool="eraser" title="Borrador (E)">
+                <i class="bi bi-eraser"></i>
+                <span class="shortcut-hint">E</span>
+            </button>
+            <button class="tool-btn" data-tool="line" title="Línea (L)">
+                <i class="bi bi-slash-lg"></i>
+                <span class="shortcut-hint">L</span>
+            </button>
+            <button class="tool-btn" data-tool="rect" title="Rectángulo (U)">
+                <i class="bi bi-square"></i>
+                <span class="shortcut-hint">U</span>
+            </button>
+            <button class="tool-btn" data-tool="circle" title="Elipse (O)">
+                <i class="bi bi-circle"></i>
+                <span class="shortcut-hint">O</span>
+            </button>
+            <button class="tool-btn" data-tool="fill" title="Relleno (G)">
+                <i class="bi bi-droplet-fill"></i>
+                <span class="shortcut-hint">G</span>
+            </button>
+            <button class="tool-btn" data-tool="eyedropper" title="Cuentagotas (I)">
+                <i class="bi bi-eye"></i>
+                <span class="shortcut-hint">I</span>
+            </button>
+            <div class="toolbox-divider"></div>
+            <button class="tool-btn" data-tool="hand" title="Mano (H)">
+                <i class="bi bi-hand-index"></i>
+                <span class="shortcut-hint">H</span>
+            </button>
+            <button class="tool-btn" data-tool="zoom" title="Zoom (Z)">
+                <i class="bi bi-zoom-in"></i>
+                <span class="shortcut-hint">Z</span>
+            </button>
+        </div>
+
+        <!-- LAYERS PANEL -->
+        <div class="layers-panel">
+            <div class="panel-header">
+                <h6><i class="bi bi-layers-fill me-1"></i> Capas</h6>
+                <div class="panel-header-actions">
+                    <button class="panel-header-btn" title="Opciones" onclick="SketchForgeLayers.addLayer()">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="layer-blend-row">
+                <select class="layer-blend-select" id="blendMode">
+                    <option value="normal">Normal</option>
+                    <option value="multiply">Multiplicar</option>
+                    <option value="screen">Trama</option>
+                    <option value="overlay">Superponer</option>
+                    <option value="darken">Oscurecer</option>
+                    <option value="lighten">Aclarar</option>
+                    <option value="color-dodge">Sobreexponer color</option>
+                    <option value="color-burn">Subexponer color</option>
+                    <option value="hard-light">Luz intensa</option>
+                    <option value="soft-light">Luz suave</option>
+                    <option value="difference">Diferencia</option>
+                    <option value="exclusion">Exclusión</option>
+                    <option value="hue">Tono</option>
+                    <option value="saturation">Saturación</option>
+                    <option value="color">Color</option>
+                    <option value="luminosity">Luminosidad</option>
+                </select>
+            </div>
+
+            <div class="layer-opacity-row">
+                <label>Opacidad</label>
+                <input type="range" id="layerOpacity" min="0" max="100" value="100" class="size-slider">
+                <span id="layerOpacityLabel" class="tool-value">100%</span>
+            </div>
+
+            <div class="layers-list" id="layersList">
+                {% for layer in layers %}
+                <div class="layer-item {% if forloop.first %}active{% endif %}"
+                     data-layer-id="{{ layer.id }}"
+                     data-layer-order="{{ layer.order }}">
+                    <div class="layer-thumb">
+                        <i class="bi bi-image"></i>
+                    </div>
+                    <div class="layer-info">
+                        <span class="layer-name">{{ layer.name }}</span>
+                        <span class="layer-meta">Opacidad: {{ layer.opacity|floatformat:0 }}%</span>
+                    </div>
+                    <div class="layer-controls">
+                        <button class="layer-visibility {% if layer.visible %}active-toggle{% endif %}" title="Visibilidad">
+                            <i class="bi bi-eye{% if not layer.visible %}-slash{% endif %}"></i>
+                        </button>
+                        <button class="layer-lock {% if layer.locked %}active-toggle{% endif %}" title="Bloquear">
+                            <i class="bi bi-lock{% if not layer.locked %}-open{% endif %}"></i>
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="layer-item active" data-layer-order="0">
+                    <div class="layer-thumb">
+                        <i class="bi bi-image"></i>
+                    </div>
+                    <div class="layer-info">
+                        <span class="layer-name">Capa 1</span>
+                        <span class="layer-meta">Opacidad: 100%</span>
+                    </div>
+                    <div class="layer-controls">
+                        <button class="layer-visibility active-toggle" title="Visibilidad">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                        <button class="layer-lock" title="Bloquear">
+                            <i class="bi bi-lock-open"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="layers-footer">
+                <button class="ps-btn" id="addLayerBtn" title="Nueva Capa">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+                <button class="ps-btn" id="duplicateLayerBtn" title="Duplicar Capa">
+                    <i class="bi bi-copy"></i>
+                </button>
+                <button class="ps-btn" id="moveLayerUpBtn" title="Mover Arriba">
+                    <i class="bi bi-arrow-up"></i>
+                </button>
+                <button class="ps-btn" id="moveLayerDownBtn" title="Mover Abajo">
+                    <i class="bi bi-arrow-down"></i>
+                </button>
+                <button class="ps-btn ps-btn-danger" id="deleteLayerBtn" title="Eliminar Capa">
+                    <i class="bi bi-trash3"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- CANVAS -->
+        <div class="canvas-wrapper" id="canvasWrapper">
+            <div class="canvas-container" id="canvasContainer">
+                <canvas id="mainCanvas"></canvas>
+                <canvas id="drawCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL -->
+        <div class="tools-panel">
+            <!-- Color Panel -->
+            <div class="panel-section">
+                <div class="panel-section-header" onclick="togglePanel(this)">
+                    <h6><i class="bi bi-palette-fill me-1"></i> Color</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="panel-section-body color-panel">
+                    <div class="color-presets" id="colorPresets">
+                        <!-- Populated by JS -->
+                    </div>
+                    <div style="margin-top:8px">
+                        <label class="tool-label mb-1">HEX</label>
+                        <div style="display:flex;gap:4px">
+                            <input type="text" id="hexInput" class="form-control" value="#000000" maxlength="7"
+                                   style="font-family:Consolas,monospace;font-size:11px">
+                            <input type="color" id="brushColorPicker" value="#000000"
+                                   style="width:30px;height:26px;padding:0;border:1px solid #555;border-radius:3px;cursor:pointer">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Panel -->
+            <div class="panel-section ai-section">
+                <div class="panel-section-header" onclick="togglePanel(this)">
+                    <h6><i class="bi bi-robot me-1"></i> Asistente IA</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="panel-section-body">
+                    <div class="mb-2">
+                        <textarea id="aiPrompt" class="form-control" rows="3"
+                                  placeholder="Describe lo que quieres generar..."></textarea>
+                    </div>
+                    <select id="aiStyle" class="ps-select mb-2">
+                        <option value="digital-art">Arte Digital</option>
+                        <option value="sketch">Boceto</option>
+                        <option value="watercolor">Acuarela</option>
+                        <option value="oil-painting">Pintura al Óleo</option>
+                        <option value="anime">Anime</option>
+                        <option value="pixel-art">Pixel Art</option>
+                        <option value="3d-render">Render 3D</option>
+                        <option value="flat-design">Diseño Flat</option>
+                    </select>
+                    <button class="ps-btn ps-btn-primary ps-btn-block" id="aiGenerateBtn">
+                        <i class="bi bi-stars me-1"></i> Generar con IA
+                    </button>
+                    <div id="aiResult" class="mt-2"></div>
+                </div>
+            </div>
+
+            <!-- Export Panel -->
+            <div class="panel-section">
+                <div class="panel-section-header" onclick="togglePanel(this)">
+                    <h6><i class="bi bi-download me-1"></i> Exportar</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="panel-section-body">
+                    <div class="export-grid mb-2">
+                        <button class="ps-btn export-btn" data-format="png">
+                            <i class="bi bi-file-earmark-image me-1"></i> PNG
+                        </button>
+                        <button class="ps-btn export-btn" data-format="jpeg">
+                            <i class="bi bi-file-earmark-JPG me-1"></i> JPEG
+                        </button>
+                        <button class="ps-btn export-btn" data-format="webp">
+                            <i class="bi bi-file-earmark me-1"></i> WebP
+                        </button>
+                        <button class="ps-btn" id="saveThumbBtn">
+                            <i class="bi bi-camera me-1"></i> Miniatura
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions Panel -->
+            <div class="panel-section">
+                <div class="panel-section-header" onclick="togglePanel(this)">
+                    <h6><i class="bi bi-gear me-1"></i> Acciones</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="panel-section-body">
+                    <button class="ps-btn ps-btn-success ps-btn-block mb-2" id="saveBtn">
+                        <i class="bi bi-cloud-arrow-up me-1"></i> Guardar Dibujo
+                    </button>
+                    <button class="ps-btn ps-btn-danger ps-btn-block" id="clearBtn">
+                        <i class="bi bi-trash3 me-1"></i> Limpiar Capa
+                    </button>
+                </div>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <div class="panel-section">
+                <div class="panel-section-header" onclick="togglePanel(this)">
+                    <h6><i class="bi bi-key me-1"></i> Atajos</h6>
+                    <i class="bi bi-chevron-down"></i>
+                </div>
+                <div class="panel-section-body" style="font-size:10px;color:var(--ps-text-dim);line-height:1.8">
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">B</kbd> Pincel</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">E</kbd> Borrador</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">L</kbd> Línea</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">U</kbd> Rectángulo</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">O</kbd> Elipse</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">G</kbd> Relleno</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">I</kbd> Cuentagotas</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">H</kbd> Mano</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">Z</kbd> Zoom</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">Ctrl+Z</kbd> Deshacer</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">Ctrl+S</kbd> Guardar</div>
+                    <div><kbd style="background:#555;padding:1px 4px;border-radius:2px">[  ]</kbd> Tamaño pincel</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATUS BAR -->
+    <div class="status-bar">
+        <div class="status-item">
+            <i class="bi bi-cpu"></i>
+            <span id="statusTool">Pincel</span>
+        </div>
+        <div class="status-divider"></div>
+        <div class="status-item">
+            <i class="bi bi-rulers"></i>
+            <span>{{ drawing.width }} x {{ drawing.height }} px</span>
+        </div>
+        <div class="status-divider"></div>
+        <div class="status-item">
+            <i class="bi bi-cursor"></i>
+            <span id="statusCoords">X: 0  Y: 0</span>
+        </div>
+        <div class="status-divider"></div>
+        <div class="status-item">
+            <i class="bi bi-layers"></i>
+            <span id="statusLayer">Capa 1</span>
+        </div>
+        <div class="status-zoom">
+            <button onclick="SketchForge.zoomOut()" title="Alejar"><i class="bi bi-dash-lg"></i></button>
+            <input type="text" id="zoomInput" value="100%" readonly>
+            <button onclick="SketchForge.zoomIn()" title="Acercar"><i class="bi bi-plus-lg"></i></button>
+            <button onclick="SketchForge.zoomFit()" title="Ajustar"><i class="bi bi-arrows-fullscreen"></i></button>
+        </div>
+    </div>
+</div>
+
+<!-- Zoom Indicator Overlay -->
+<div class="zoom-indicator" id="zoomIndicator"></div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/canvas.js' %}"></script>
+<script src="{% static 'js/brushes.js' %}"></script>
+<script src="{% static 'js/layers.js' %}"></script>
+<script src="{% static 'js/export.js' %}"></script>
+<script src="{% static 'js/ai.js' %}"></script>
+<script>
+    const DRAWING_ID = {{ drawing.id }};
+    const CANVAS_WIDTH = {{ drawing.width }};
+    const CANVAS_HEIGHT = {{ drawing.height }};
+    const SAVE_URL = "{% url 'canvas:save_layer' drawing.id %}";
+    const SAVE_DRAWING_URL = "{% url 'canvas:save_drawing' drawing.id %}";
+    const EXPORT_URL = "{% url 'canvas:export_drawing' drawing.id %}";
+    const THUMBNAIL_URL = "{% url 'canvas:upload_thumbnail' drawing.id %}";
+    const AI_URL = "{% url 'canvas:ai_generate' %}";
+    const CSRF_TOKEN = "{{ csrf_token }}";
+
+    function togglePanel(header) {
+        header.classList.toggle('collapsed');
+        const body = header.nextElementSibling;
+        body.classList.toggle('collapsed');
+    }
+
+    $(document).ready(function() {
+        SketchForge.init();
+    });
+</script>
+{% endblock %}

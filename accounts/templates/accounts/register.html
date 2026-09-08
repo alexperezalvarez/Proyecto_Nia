@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+{% block title %}Registro - SketchForge{% endblock %}
+
+{% block content %}
+<div class="container mt-5 pt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-5 col-lg-4">
+            <div class="card shadow-lg" style="border:1px solid var(--border);background:var(--card-bg)">
+                <div class="card-body p-4">
+                    <div class="text-center mb-4">
+                        <div style="width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,#2d8ceb,#17a589);display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+                            <i class="bi bi-person-plus-fill" style="font-size:1.5rem;color:white"></i>
+                        </div>
+                        <h3 class="fw-bold" style="letter-spacing:-0.5px">Crear Cuenta</h3>
+                        <p class="text-muted" style="font-size:0.88rem">Únete a SketchForge</p>
+                    </div>
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div class="mb-3">
+                            <label class="form-label" style="font-size:0.85rem">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.errors %}
+                            <div class="text-danger" style="font-size:0.8rem;margin-top:4px">{{ field.errors|striptags }}</div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn w-100 py-2 mt-1"
+                                style="background:#2d8ceb;border:none;color:white;font-weight:600;border-radius:6px">
+                            <i class="bi bi-person-plus me-2"></i> Crear Cuenta
+                        </button>
+                    </form>
+
+                    <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+                        <span style="color:var(--text-muted);font-size:0.85rem">¿Ya tienes cuenta? </span>
+                        <a href="{% url 'account_login' %}" style="color:#2d8ceb;font-weight:600;text-decoration:none;font-size:0.85rem">
+                            Inicia Sesión
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

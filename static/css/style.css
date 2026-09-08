@@ -1,0 +1,417 @@
+/* =============================================
+   SketchForge Global Styles - Photoshop Theme
+   ============================================= */
+
+:root {
+    --primary: #2d8ceb;
+    --primary-dark: #1a7fd4;
+    --primary-light: #5ba3ec;
+    --secondary: #17a589;
+    --dark: #1e1e1e;
+    --darker: #121212;
+    --light: #f5f5f5;
+    --bg: #2c2c2c;
+    --card-bg: #333333;
+    --text: #cccccc;
+    --text-bright: #e0e0e0;
+    --text-muted: #888888;
+    --navbar-bg: #2c2c2c;
+    --border: #1a1a1a;
+    --border-light: #535353;
+    --shadow: rgba(0,0,0,0.4);
+    --hero-bg: linear-gradient(135deg, #1a1a2e 0%, #2d8ceb 50%, #17a589 100%);
+    --footer-bg: #1a1a1a;
+}
+
+[data-theme="dark"] {
+    --bg: #2c2c2c;
+    --card-bg: #333333;
+    --text: #cccccc;
+    --text-bright: #e0e0e0;
+    --text-muted: #888888;
+    --navbar-bg: #2c2c2c;
+    --border: #1a1a1a;
+    --border-light: #535353;
+    --shadow: rgba(0,0,0,0.5);
+    --hero-bg: linear-gradient(135deg, #0d1117 0%, #1a3a5c 50%, #0d3331 100%);
+    --footer-bg: #121212;
+}
+
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6 {
+    color: #e0e0e0;
+}
+
+body {
+    background: var(--bg);
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    padding-top: 56px;
+    color: var(--text);
+    transition: background 0.3s, color 0.3s;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ===== NAVBAR ===== */
+.navbar {
+    background: var(--navbar-bg) !important;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 1px 4px var(--shadow);
+    padding: 0 0;
+}
+
+.navbar-brand {
+    font-size: 1.2rem;
+    letter-spacing: -0.3px;
+    padding: 8px 16px;
+    font-weight: 700;
+}
+
+.navbar-brand i {
+    font-size: 1.3rem;
+}
+
+.nav-link {
+    padding: 8px 14px !important;
+    font-size: 0.88rem;
+    transition: background 0.15s, color 0.15s;
+    border-radius: 4px;
+    margin: 0 2px;
+}
+
+.nav-link:hover {
+    background: rgba(255,255,255,0.08);
+    color: white !important;
+}
+
+.theme-toggle {
+    background: none;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 4px;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+}
+
+.theme-toggle:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border-color: rgba(255,255,255,0.3);
+}
+
+/* ===== HERO ===== */
+.hero-section {
+    background: var(--hero-bg);
+    color: white;
+    padding: 100px 0 70px;
+    position: relative;
+    overflow: hidden;
+}
+
+.hero-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(circle at 20% 50%, rgba(45,140,235,0.15) 0%, transparent 50%),
+        radial-gradient(circle at 80% 50%, rgba(23,165,137,0.15) 0%, transparent 50%);
+}
+
+.hero-section h1 {
+    font-weight: 800;
+    letter-spacing: -1px;
+    text-shadow: 0 2px 20px rgba(0,0,0,0.3);
+}
+
+.hero-section .lead {
+    font-weight: 300;
+    opacity: 0.9;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* ===== CARDS ===== */
+.card {
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card h4, .card h5, .card h6 {
+    color: var(--text-bright);
+}
+
+/* Feature Cards */
+.feature-btn {
+    position: relative;
+    background: var(--card-bg);
+    border-radius: 10px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.25s ease;
+    border: 1px solid var(--border);
+    overflow: hidden;
+}
+
+.feature-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary);
+    transform: scaleX(0);
+    transition: transform 0.25s ease;
+}
+
+.feature-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px var(--shadow);
+    border-color: var(--primary);
+}
+
+.feature-btn:hover::before {
+    transform: scaleX(1);
+}
+
+.feature-btn:active {
+    transform: scale(0.97) translateY(-2px);
+    transition-duration: 0.1s;
+}
+
+.feature-icon {
+    font-size: 2.2rem;
+    display: block;
+    margin-bottom: 0.8rem;
+    transition: transform 0.25s ease;
+}
+
+.feature-btn:hover .feature-icon {
+    transform: scale(1.1);
+}
+
+.feature-btn h4 {
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    font-size: 1.1rem;
+    color: var(--text-bright);
+}
+
+.feature-btn:hover h4 {
+    color: var(--primary);
+}
+
+.feature-btn p {
+    margin-bottom: 0;
+    font-size: 0.85rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+/* Drawing Cards */
+.drawing-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px var(--shadow);
+    background: var(--card-bg);
+}
+
+.drawing-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px var(--shadow);
+    border-color: var(--primary);
+}
+
+.drawing-thumb {
+    height: 160px;
+    object-fit: cover;
+    background: var(--bg);
+}
+
+.press-card {
+    transition: transform 0.15s;
+}
+
+.press-card:active {
+    transform: scale(0.97);
+}
+
+/* ===== BUTTONS ===== */
+.btn-primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    font-weight: 500;
+}
+
+.btn-primary:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+}
+
+.btn-success {
+    background: var(--secondary);
+    border-color: var(--secondary);
+}
+
+/* ===== FORMS ===== */
+.form-control, .form-select {
+    background: var(--card-bg);
+    border-color: var(--border-light);
+    color: var(--text);
+    border-radius: 6px;
+}
+
+.form-control:focus, .form-select:focus {
+    background: var(--card-bg);
+    color: var(--text-bright);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(45,140,235,0.15);
+}
+
+.form-label, label {
+    color: var(--text);
+    font-size: 0.88rem;
+    font-weight: 500;
+}
+
+/* ===== DROPDOWNS ===== */
+.dropdown-menu {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 4px 20px var(--shadow);
+}
+
+.dropdown-item {
+    color: var(--text);
+    padding: 7px 14px;
+    font-size: 0.88rem;
+    transition: background 0.1s;
+}
+
+.dropdown-item:hover {
+    background: var(--primary);
+    color: white;
+}
+
+.dropdown-divider {
+    border-color: var(--border);
+}
+
+/* ===== FOOTER ===== */
+footer {
+    background: var(--footer-bg) !important;
+    border-top: 1px solid var(--border);
+}
+
+/* ===== SECTION ===== */
+.features-section {
+    padding: 60px 0;
+}
+
+.features-section h2 {
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-bright);
+}
+
+/* ===== DARK MODE ===== */
+[data-theme="dark"] .display-3,
+[data-theme="dark"] .display-4 {
+    text-shadow: 0 0 30px rgba(45,140,235,0.2);
+}
+
+[data-theme="dark"] .navbar-brand span {
+    background: linear-gradient(135deg, #5ba3ec, #2d8ceb);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+[data-theme="dark"] .card {
+    border-color: rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .card.shadow-lg {
+    box-shadow: 0 1rem 3rem rgba(0,0,0,0.5) !important;
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+[data-theme="dark"] .form-control,
+[data-theme="dark"] .form-select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: #e0e0e0;
+}
+
+[data-theme="dark"] .form-control:focus,
+[data-theme="dark"] .form-select:focus {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(45,140,235,0.2);
+}
+
+[data-theme="dark"] .form-label,
+[data-theme="dark"] label {
+    color: #ffffff;
+}
+
+[data-theme="dark"] .card .form-control::placeholder {
+    color: rgba(255,255,255,0.4);
+}
+
+[data-theme="dark"] .text-muted {
+    color: var(--text-muted) !important;
+}
+
+[data-theme="dark"] a.text-primary {
+    color: #5ba3ec !important;
+}
+
+[data-theme="dark"] .card form .btn-primary {
+    background: linear-gradient(135deg, #2d8ceb, #1a7fd4);
+    border: none;
+    box-shadow: 0 4px 15px rgba(45,140,235,0.3);
+    transition: all 0.2s;
+}
+
+[data-theme="dark"] .card form .btn-primary:hover {
+    box-shadow: 0 6px 25px rgba(45,140,235,0.5);
+    transform: translateY(-1px);
+}
+
+/* ===== ALERTS ===== */
+.alert {
+    border-radius: 6px;
+    font-size: 0.88rem;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 80px 0 50px;
+    }
+
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+
+    .features-section {
+        padding: 40px 0;
+    }
+}

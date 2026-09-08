@@ -75,18 +75,35 @@ DATABASES = {
     }
 }
 
-if os.environ.get('DATABASE_URL'):
+def _configure_postgres(url):
     import urllib.parse
-    url = urllib.parse.urlparse(os.environ['DATABASE_URL'])
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': url.path.lstrip('/'),
-            'USER': url.username,
-            'PASSWORD': url.password,
-            'HOST': url.hostname,
-            'PORT': url.port,
-        }
+    parsed = urllib.parse.urlparse(url)
+    return {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': parsed.path.lstrip('/'),
+        'USER': parsed.username,
+        'PASSWORD': parsed.password,
+        'HOST': parsed.hostname,
+        'PORT': parsed.port or '5432',
+        'OPTIONS': {'sslmode': 'require'},
+    }
+
+postgres_url = (
+    os.environ.get('POSTGRES_URL')
+    or os.environ.get('POSTGRES_URL_NON_POOLING')
+    or os.environ.get('DATABASE_URL')
+)
+if postgres_url:
+    DATABASES['default'] = _configure_postgres(postgres_url)
+elif os.environ.get('POSTGRES_HOST'):
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DATABASE', 'verceldb'),
+        'USER': os.environ.get('POSTGRES_USER', ''),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', ''),
+        'HOST': os.environ.get('POSTGRES_HOST', ''),
+        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        'OPTIONS': {'sslmode': 'require'},
     }
 
 AUTH_PASSWORD_VALIDATORS = [

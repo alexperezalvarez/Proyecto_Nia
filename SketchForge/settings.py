@@ -92,6 +92,7 @@ postgres_url = (
     os.environ.get('POSTGRES_URL')
     or os.environ.get('POSTGRES_URL_NON_POOLING')
     or os.environ.get('DATABASE_URL')
+    or os.environ.get('NEON_DATABASE_URL')
 )
 if postgres_url:
     DATABASES['default'] = _configure_postgres(postgres_url)

@@ -51,10 +51,21 @@ const SketchForgeAI = {
                         };
                         img.src = resp.image_url;
                     });
+                } else if (resp.status === 'no_credits' || resp.status === 'rate_limit') {
+                    const billingLink = resp.status === 'no_credits'
+                        ? '<br><a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener" style="color:#00e5ff">Abrir facturación de OpenAI</a>'
+                        : '';
+                    resultDiv.innerHTML = `
+                        <div style="background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.25);padding:8px;border-radius:4px;font-size:11px;color:#ff9800">
+                            <i class="bi bi-exclamation-triangle me-1"></i> ${resp.message}
+                            ${billingLink}
+                        </div>
+                    `;
                 } else if (resp.status === 'no_access') {
+                    const hint = resp.hint ? `<br><small style="opacity:0.8">${resp.hint}</small>` : '';
                     resultDiv.innerHTML = `
                         <div style="background:rgba(255,152,0,0.1);border:1px solid rgba(255,152,0,0.2);padding:8px;border-radius:4px;font-size:11px;margin-bottom:8px;color:#ff9800">
-                            <i class="bi bi-exclamation-triangle me-1"></i> ${resp.message}
+                            <i class="bi bi-exclamation-triangle me-1"></i> ${resp.message}${hint}
                         </div>
                         <button class="ps-btn ps-btn-block use-gpt-btn" style="font-size:11px">
                             <i class="bi bi-chat-dots me-1"></i> Obtener ideas con GPT-4o
@@ -92,13 +103,17 @@ const SketchForgeAI = {
             method: 'POST',
             headers: { 'X-CSRFToken': CSRF_TOKEN },
             contentType: 'application/json',
-            data: JSON.stringify({ prompt, style }),
+            data: JSON.stringify({
+                prompt,
+                style,
+                lang: typeof SFI18N !== 'undefined' ? SFI18N.getLang() : 'es'
+            }),
             success: (resp) => {
                 if (resp.status === 'ok') {
                     resultDiv.innerHTML = `
                         <div style="background:rgba(45,140,235,0.1);border:1px solid rgba(45,140,235,0.2);padding:8px;border-radius:4px;font-size:11px;color:var(--ps-text)">
                             <strong style="color:#2d8ceb"><i class="bi bi-lightbulb me-1"></i> Ideas creativas:</strong><br>
-                            <div style="margin-top:6px;line-height:1.6">${resp.ideas.replace(/\n/g, '<br>')}</div>
+                            <div data-no-i18n style="margin-top:6px;line-height:1.6">${resp.ideas.replace(/\n/g, '<br>')}</div>
                         </div>
                     `;
                 } else {

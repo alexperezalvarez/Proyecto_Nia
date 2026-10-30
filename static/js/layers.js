@@ -54,6 +54,7 @@ const SketchForgeLayers = {
         const div = document.createElement('div');
         div.className = 'layer-item active';
         div.dataset.layerOrder = list.children.length;
+        div.dataset.layerName = `Capa ${this.layerCounter}`;
         div.innerHTML = `
             <div class="layer-thumb">
                 <i class="bi bi-image"></i>
@@ -116,6 +117,7 @@ const SketchForgeLayers = {
 
         const finish = () => {
             const newName = input.value.trim() || currentName;
+            item.dataset.layerName = newName;
             const span = document.createElement('span');
             span.className = 'layer-name';
             span.textContent = newName;
@@ -140,7 +142,10 @@ const SketchForgeLayers = {
         const clone = active.cloneNode(true);
         clone.classList.add('active');
         const nameEl = clone.querySelector('.layer-name');
-        if (nameEl) nameEl.textContent = nameEl.textContent + ' copia';
+        const baseName = active.dataset.layerName || active.querySelector('.layer-name')?.textContent || 'Capa';
+        const copyName = `${baseName} copia`;
+        clone.dataset.layerName = copyName;
+        if (nameEl) nameEl.textContent = copyName;
 
         active.classList.remove('active');
         active.after(clone);

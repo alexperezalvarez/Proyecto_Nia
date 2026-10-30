@@ -101,7 +101,12 @@
                 </div>
             </div>
         </div>
-        <div class="menu-bar-title">{{ drawing.title }} @ {{ drawing.width }}x{{ drawing.height }}</div>
+        <div class="menu-bar-title">
+            <input type="text" id="drawingTitleInput" class="menu-bar-title-input"
+                   value="{{ drawing.title }}" maxlength="200"
+                   aria-label="Título del dibujo" title="Haz clic para cambiar el título" />
+            <span class="menu-bar-size">@ {{ drawing.width }}x{{ drawing.height }}</span>
+        </div>
     </div>
 
     <!-- TOOLBAR -->
@@ -120,7 +125,7 @@
         <div class="tool-color-group">
             <div class="color-picker-wrapper">
                 <button class="color-swap" id="colorSwapBtn" title="Intercambiar colores">
-                    <i class="bi bi-arrow交换"></i>
+                    <i class="bi bi-arrow-left-right"></i>
                 </button>
                 <div class="color-picker-fg" id="colorFg" style="background:#000000" title="Color de frente">
                 </div>
@@ -244,7 +249,8 @@
                 {% for layer in layers %}
                 <div class="layer-item {% if forloop.first %}active{% endif %}"
                      data-layer-id="{{ layer.id }}"
-                     data-layer-order="{{ layer.order }}">
+                     data-layer-order="{{ layer.order }}"
+                     data-layer-name="{{ layer.name }}">
                     <div class="layer-thumb">
                         <i class="bi bi-image"></i>
                     </div>
@@ -262,7 +268,7 @@
                     </div>
                 </div>
                 {% empty %}
-                <div class="layer-item active" data-layer-order="0">
+                <div class="layer-item active" data-layer-order="0" data-layer-name="Capa 1">
                     <div class="layer-thumb">
                         <i class="bi bi-image"></i>
                     </div>
@@ -445,6 +451,16 @@
         <div class="status-item">
             <i class="bi bi-layers"></i>
             <span id="statusLayer">Capa 1</span>
+        </div>
+        <div class="status-item tablet-status" id="tabletStatus" hidden>
+            <span class="tablet-dot"></span>
+            <i class="bi bi-pen"></i>
+            <span>Tableta gráfica detectada</span>
+            <button type="button" class="tablet-pressure-toggle" id="pressureToggle"
+                    title="Sensibilidad a la presión" aria-pressed="false">
+                <i class="bi bi-speedometer2"></i>
+                <span>Presión</span>
+            </button>
         </div>
         <div class="status-zoom">
             <button onclick="SketchForge.zoomOut()" title="Alejar"><i class="bi bi-dash-lg"></i></button>

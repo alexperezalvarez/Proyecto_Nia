@@ -7,6 +7,7 @@ urlpatterns = [
     path('editor/', views.editor, name='editor'),
     path('editor/<int:drawing_id>/', views.editor, name='editor'),
     path('gallery/', views.gallery, name='gallery'),
+    path('gallery/delete/<int:drawing_id>/', views.delete_drawing, name='delete_drawing'),
     path('new/', views.new_drawing, name='new_drawing'),
     path('save/<int:drawing_id>/', views.save_drawing, name='save_drawing'),
     path('save-layer/<int:drawing_id>/', views.save_layer, name='save_layer'),

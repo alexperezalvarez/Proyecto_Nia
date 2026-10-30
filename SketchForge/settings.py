@@ -37,6 +37,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 MIDDLEWARE = [
+    'SketchForge.middleware.VercelOidcHeadersMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -123,8 +124,26 @@ STATIC_URL = 'static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+_BLOB_ENABLED = bool(
+    os.getenv('BLOB_READ_WRITE_TOKEN')
+    or os.getenv('VERCEL_BLOB_READ_WRITE_TOKEN')
+    or os.getenv('BLOB_STORE_ID')
+)
+STORAGES = {
+    'default': {
+        'BACKEND': (
+            'SketchForge.blob_storage.VercelBlobStorage'
+            if _BLOB_ENABLED
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
+    },
+    'staticfiles': {
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+    },
+}
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

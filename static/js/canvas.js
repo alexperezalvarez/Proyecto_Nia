@@ -23,6 +23,9 @@ const SketchForge = {
     panY: 0,
     spaceHeld: false,
     lastPinchDist: 0,
+    penDetected: false,
+    penPressure: 0.5,
+    pressureEnabled: false,
 
     init() {
         this.canvas = document.getElementById('mainCanvas');
@@ -42,12 +45,23 @@ const SketchForge = {
         this.setupZoom();
         this.setupColorPresets();
         this.setupColorSync();
+        this.setupTablet();
         this.saveState();
 
         document.getElementById('saveBtn').addEventListener('click', () => this.saveDrawing());
         document.getElementById('undoBtn').addEventListener('click', () => this.undo());
         document.getElementById('redoBtn').addEventListener('click', () => this.redo());
         document.getElementById('clearBtn').addEventListener('click', () => this.clearLayer());
+
+        const titleInput = document.getElementById('drawingTitleInput');
+        if (titleInput) {
+            titleInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.saveDrawing();
+                }
+            });
+        }
 
         this.zoomFit();
         this.updateStatus('Pincel');
@@ -152,6 +166,40 @@ const SketchForge = {
         const dx = e.touches[0].clientX - e.touches[1].clientX;
         const dy = e.touches[0].clientY - e.touches[1].clientY;
         return Math.sqrt(dx * dx + dy * dy);
+    },
+
+    setupTablet() {
+        const status = document.getElementById('tabletStatus');
+        const toggle = document.getElementById('pressureToggle');
+        if (!status || !toggle) return;
+
+        this.pressureEnabled = localStorage.getItem('sketchforge-pressure') === '1';
+
+        const sync = () => {
+            toggle.classList.toggle('active', this.pressureEnabled);
+            toggle.setAttribute('aria-pressed', this.pressureEnabled ? 'true' : 'false');
+        };
+        sync();
+
+        const track = (e) => {
+            if (e.pointerType !== 'pen') return;
+            this.penPressure = e.pressure > 0 ? e.pressure : 0.5;
+            if (!this.penDetected) {
+                this.penDetected = true;
+                status.hidden = false;
+                this.showToast(SFI18N.t('Tableta gráfica detectada'), 'success');
+            }
+        };
+
+        document.addEventListener('pointermove', track, { passive: true });
+        document.addEventListener('pointerdown', track, { passive: true });
+
+        toggle.addEventListener('click', () => {
+            this.pressureEnabled = !this.pressureEnabled;
+            localStorage.setItem('sketchforge-pressure', this.pressureEnabled ? '1' : '0');
+            sync();
+            this.showToast(SFI18N.t(this.pressureEnabled ? 'Presión activada' : 'Presión desactivada'), 'info');
+        });
     },
 
     setupKeyboard() {
@@ -419,7 +467,11 @@ const SketchForge = {
 
         if (this.currentTool === 'brush' || this.currentTool === 'eraser') {
             ctx.strokeStyle = color;
-            ctx.lineWidth = size;
+            let strokeWidth = size;
+            if (this.pressureEnabled && this.penDetected) {
+                strokeWidth = Math.max(1, size * (0.25 + this.penPressure * 0.75));
+            }
+            ctx.lineWidth = strokeWidth;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.lineTo(pos.x, pos.y);
@@ -676,9 +728,19 @@ const SketchForge = {
                 break;
         }
 
+        const filterNames = {
+            grayscale: 'Escala de Grises',
+            invert: 'Invertir Colores',
+            brightness: 'Brillo +',
+            blur: 'Desenfoque'
+        };
+        const label = filterNames[filter] || filter;
+        const prefix = typeof SFI18N !== 'undefined' ? SFI18N.t('Filtro aplicado') : 'Filtro aplicado';
+        const name = typeof SFI18N !== 'undefined' ? SFI18N.t(label) : label;
+
         this.ctx.putImageData(imageData, 0, 0);
         this.saveState();
-        this.showToast('Filtro aplicado: ' + filter, 'success');
+        this.showToast(`${prefix}: ${name}`, 'success');
     },
 
     simpleBlur(imageData) {
@@ -739,13 +801,18 @@ const SketchForge = {
     },
 
     newDrawing() {
-        if (confirm('Crear un nuevo dibujo? Los cambios no guardados se perderán.')) {
+        if (confirm(SFI18N.t('Crear un nuevo dibujo? Los cambios no guardados se perderán.'))) {
             window.location.href = SAVE_DRAWING_URL.replace('save', 'new');
         }
     },
 
     saveDrawing() {
         const data = this.canvas.toDataURL();
+        const titleInput = document.getElementById('drawingTitleInput');
+        const title = titleInput ? titleInput.value.trim() : '';
+        const activeItem = document.querySelector('.layer-item.active');
+        const activeName = activeItem?.dataset?.layerName || 'Capa 1';
+
         $.ajax({
             url: SAVE_URL,
             method: 'POST',
@@ -753,12 +820,17 @@ const SketchForge = {
             contentType: 'application/json',
             data: JSON.stringify({
                 layer_id: null,
-                name: 'Capa 1',
+                name: activeName,
+                title: title,
                 data: { image: data },
                 opacity: 1.0,
                 visible: true
             }),
-            success: () => {
+            success: (resp) => {
+                if (resp.title && titleInput) {
+                    titleInput.value = resp.title;
+                    document.title = `${resp.title} - SketchForge`;
+                }
                 this.showToast('Dibujo guardado correctamente', 'success');
             },
             error: () => {

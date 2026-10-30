@@ -5,16 +5,15 @@
 
 {% block content %}
 <div class="container mt-5 pt-5">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
         <div>
-            <h2 class="fw-bold" style="letter-spacing:-0.5px">
-                <i class="bi bi-grid-3x3-gap me-2" style="color:#2d8ceb"></i> Galería
+            <h2 class="fw-bold" style="letter-spacing:0.05em;text-transform:uppercase">
+                <i class="bi bi-grid-3x3-gap me-2" style="color:var(--primary);filter:drop-shadow(0 0 10px var(--glow))"></i> Galería
             </h2>
-            <p class="text-muted" style="font-size:0.88rem;margin:0">Tus creaciones digitales</p>
+            <p class="text-muted" style="font-size:0.92rem;margin:0">Tus creaciones digitales</p>
         </div>
-        <a href="{% url 'canvas:editor' %}" class="btn"
-           style="background:#2d8ceb;border:none;color:white;border-radius:6px;padding:8px 20px;font-weight:500">
-            <i class="bi bi-plus-lg me-1"></i> Nuevo Dibujo
+        <a href="{% url 'canvas:editor' %}" class="sf-btn sf-btn-primary">
+            <i class="bi bi-plus-lg"></i> Nuevo Dibujo
         </a>
     </div>
 
@@ -22,45 +21,199 @@
     <div class="row g-3">
         {% for drawing in drawings %}
         <div class="col-md-4 col-lg-3">
-            <a href="{% url 'canvas:editor' drawing.id %}" class="text-decoration-none">
-                <div class="drawing-card h-100" style="border-radius:8px;overflow:hidden">
+            <div class="drawing-card sf-corner h-100" style="border-radius:14px;overflow:hidden">
+                <a href="{% url 'canvas:editor' drawing.id %}" class="text-decoration-none d-block">
                     {% if drawing.thumbnail %}
                     <img src="{{ drawing.thumbnail.url }}" class="drawing-thumb" alt="{{ drawing.title }}">
                     {% else %}
                     <div class="drawing-thumb d-flex align-items-center justify-content-center"
-                         style="background:linear-gradient(135deg,#252525,#3a3a3a)">
-                        <i class="bi bi-image" style="font-size:2.5rem;color:#555"></i>
+                         style="background:linear-gradient(135deg,#05070f,#0d1530)">
+                        <i class="bi bi-image" style="font-size:2.5rem;color:rgba(0,229,255,0.35);filter:drop-shadow(0 0 14px rgba(0,229,255,0.25))"></i>
                     </div>
                     {% endif %}
-                    <div style="padding:12px">
-                        <h6 style="color:var(--text-bright);font-weight:600;margin:0 0 4px;font-size:0.9rem">
+                    <div style="padding:14px">
+                        <h6 data-no-i18n style="color:var(--text-bright);font-weight:600;margin:0 0 6px;font-size:0.95rem;letter-spacing:0.02em">
                             {{ drawing.title }}
                         </h6>
-                        <div style="display:flex;align-items:center;gap:8px;color:var(--text-muted);font-size:0.75rem">
+                        <div style="display:flex;align-items:center;gap:10px;color:var(--text-muted);font-size:0.78rem">
                             <span><i class="bi bi-clock me-1"></i>{{ drawing.updated_at|date:"d/m/Y" }}</span>
                             <span><i class="bi bi-layers me-1"></i>{{ drawing.layers.count }}</span>
                             <span>{{ drawing.width }}x{{ drawing.height }}</span>
                         </div>
                     </div>
-                </div>
-            </a>
+                </a>
+                <form method="post" action="{% url 'canvas:delete_drawing' drawing.id %}"
+                      class="drawing-delete-form" data-confirm-delete>
+                    {% csrf_token %}
+                    <button type="submit" class="drawing-delete-btn" title="Eliminar dibujo"
+                            aria-label="Eliminar dibujo">
+                        <i class="bi bi-trash3"></i>
+                    </button>
+                </form>
+            </div>
         </div>
         {% endfor %}
     </div>
     {% else %}
     <div class="text-center py-5" style="margin-top:60px">
-        <div style="width:80px;height:80px;border-radius:16px;background:var(--card-bg);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;border:1px solid var(--border)">
-            <i class="bi bi-palette" style="font-size:2rem;color:var(--text-muted)"></i>
+        <div class="sf-panel sf-corner" style="width:90px;height:90px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:18px">
+            <i class="bi bi-palette" style="font-size:2.2rem;color:var(--primary);filter:drop-shadow(0 0 16px var(--glow))"></i>
         </div>
-        <h4 class="mt-3" style="color:var(--text-bright);font-weight:600">Sin dibujos aún</h4>
-        <p class="text-muted" style="max-width:400px;margin:8px auto 20px;font-size:0.9rem">
+        <h4 class="mt-3" style="color:var(--text-bright);font-weight:700;letter-spacing:0.05em;text-transform:uppercase">Sin dibujos aún</h4>
+        <p class="text-muted" style="max-width:420px;margin:8px auto 20px;font-size:0.95rem">
             Comienza a crear tu primera obra de arte digital con nuestras herramientas profesionales.
         </p>
-        <a href="{% url 'canvas:editor' %}" class="btn"
-           style="background:#2d8ceb;border:none;color:white;border-radius:6px;padding:10px 28px;font-weight:600">
-            <i class="bi bi-pencil-square me-2"></i> Crear mi Primer Dibujo
+        <a href="{% url 'canvas:editor' %}" class="sf-btn sf-btn-primary">
+            <i class="bi bi-pencil-square"></i> Crear mi Primer Dibujo
         </a>
     </div>
     {% endif %}
 </div>
+
+<div class="delete-overlay" id="deleteOverlay" hidden>
+    <div class="delete-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteTitle">
+        <div class="delete-icon" aria-hidden="true">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <h3 id="deleteTitle">Eliminar dibujo</h3>
+        <p class="delete-warning">Esta acción no se puede deshacer.</p>
+        <p class="delete-question">¿Seguro que quieres destruir este dibujo?</p>
+        <p class="delete-target" id="deleteTarget" data-no-i18n></p>
+        <div class="delete-actions">
+            <button type="button" class="delete-btn delete-cancel" id="deleteCancel">
+                <i class="bi bi-x-lg"></i> Cancelar
+            </button>
+            <button type="button" class="delete-btn delete-confirm" id="deleteConfirm">
+                <i class="bi bi-bomb"></i> Destruir
+            </button>
+        </div>
+    </div>
+</div>
+<div class="explosion-layer" id="explosionLayer" aria-hidden="true"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var overlay = document.getElementById('deleteOverlay');
+    var cancelBtn = document.getElementById('deleteCancel');
+    var confirmBtn = document.getElementById('deleteConfirm');
+    var explosionLayer = document.getElementById('explosionLayer');
+    var deleteTarget = document.getElementById('deleteTarget');
+    if (!overlay || !cancelBtn || !confirmBtn || !explosionLayer) return;
+
+    var pendingForm = null;
+    var pendingCard = null;
+    var closeTimer = null;
+
+    function openDialog(form) {
+        pendingForm = form;
+        pendingCard = form.closest('.drawing-card');
+        var titleEl = pendingCard ? pendingCard.querySelector('h6') : null;
+        if (deleteTarget) {
+            deleteTarget.textContent = titleEl ? titleEl.textContent.trim() : '';
+        }
+        clearTimeout(closeTimer);
+        overlay.hidden = false;
+        document.body.classList.add('delete-modal-open');
+        requestAnimationFrame(function() {
+            overlay.classList.add('show');
+            confirmBtn.focus();
+        });
+    }
+
+    function closeDialog() {
+        overlay.classList.remove('show');
+        document.body.classList.remove('delete-modal-open');
+        closeTimer = setTimeout(function() {
+            overlay.hidden = true;
+        }, 260);
+        pendingForm = null;
+        pendingCard = null;
+    }
+
+    document.querySelectorAll('[data-confirm-delete]').forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            openDialog(form);
+        });
+    });
+
+    cancelBtn.addEventListener('click', closeDialog);
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeDialog();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && !overlay.hidden) closeDialog();
+    });
+
+    confirmBtn.addEventListener('click', function() {
+        var form = pendingForm;
+        var card = pendingCard;
+        if (!form) return;
+        pendingForm = null;
+        pendingCard = null;
+
+        overlay.classList.remove('show');
+        document.body.classList.remove('delete-modal-open');
+        closeTimer = setTimeout(function() {
+            overlay.hidden = true;
+        }, 220);
+
+        var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!card || reduceMotion) {
+            form.submit();
+            return;
+        }
+
+        destroyCard(card, function() {
+            form.submit();
+        });
+    });
+
+    function destroyCard(card, done) {
+        var rect = card.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var cy = rect.top + rect.height / 2;
+        var colors = ['#ffb020', '#ff8a2b', '#ff4364', '#ff2bd6', '#00e5ff'];
+
+        explosionLayer.style.setProperty('--fx', cx + 'px');
+        explosionLayer.style.setProperty('--fy', cy + 'px');
+
+        for (var i = 0; i < 30; i++) {
+            var particle = document.createElement('span');
+            var angle = (Math.PI * 2 * i) / 30 + Math.random() * 0.5;
+            var distance = 50 + Math.random() * 150;
+            particle.className = 'explosion-particle';
+            particle.style.setProperty('--x', cx + 'px');
+            particle.style.setProperty('--y', cy + 'px');
+            particle.style.setProperty('--dx', (Math.cos(angle) * distance).toFixed(1) + 'px');
+            particle.style.setProperty('--dy', (Math.sin(angle) * distance).toFixed(1) + 'px');
+            particle.style.setProperty('--rot', Math.round(Math.random() * 720 - 360) + 'deg');
+            particle.style.setProperty('--size', (4 + Math.random() * 7).toFixed(1) + 'px');
+            particle.style.setProperty('--color', colors[i % colors.length]);
+            particle.style.animationDelay = Math.round(Math.random() * 70) + 'ms';
+            explosionLayer.appendChild(particle);
+            particle.addEventListener('animationend', function() {
+                this.remove();
+            });
+        }
+
+        var flash = document.createElement('span');
+        flash.className = 'explosion-flash';
+        explosionLayer.appendChild(flash);
+        flash.addEventListener('animationend', function() {
+            this.remove();
+        });
+
+        card.style.setProperty('--origin-x', (cx - rect.left) + 'px');
+        card.style.setProperty('--origin-y', (cy - rect.top) + 'px');
+        card.classList.add('is-destroying');
+
+        setTimeout(done, 820);
+    }
+});
+</script>
 {% endblock %}

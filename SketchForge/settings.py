@@ -10,7 +10,13 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-sketchforge-dev-key
 
 DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1,.vercel.app,.now.sh').split(',')
+ALLOWED_HOSTS = [
+    "sketchforge.art",
+    "www.sketchforge.art",
+    ".vercel.app",   # permite también las URLs de preview de Vercel
+    "localhost",
+    "127.0.0.1",
+]
 
 INSTALLED_APPS = [
     'django.contrib.admin',

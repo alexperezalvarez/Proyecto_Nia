@@ -337,24 +337,44 @@ def ai_nano_generate(request):
             'hint': 'Añádela a tu archivo .env y reinicia el servidor'
         })
 
-    api_url = getattr(settings, 'NANOBANANA_API_URL', '') or os.environ.get('NANOBANANA_API_URL', 'https://api.nanobananaapi.ai/v1/generate')
+    model = getattr(settings, 'GEMINI_IMAGE_MODEL', '') or os.environ.get('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
+    api_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}'
 
     try:
         headers = {
-            'Authorization': f'Bearer {api_key}',
             'Content-Type': 'application/json',
-            'Accept': 'application/json',
         }
+
+        parts = []
+        if prompt:
+            parts.append({'text': prompt})
+        if image_b64:
+            clean_b64 = image_b64
+            if isinstance(image_b64, str) and image_b64.startswith('data:'):
+                try:
+                    clean_b64 = image_b64.split(',', 1)[1]
+                except Exception:
+                    pass
+            parts.append({
+                'inlineData': {
+                    'mimeType': 'image/png',
+                    'data': clean_b64
+                }
+            })
 
         payload = {
-            'prompt': prompt,
+            'contents': [
+                {
+                    'parts': parts
+                }
+            ],
+            'generationConfig': {
+                'responseModalities': ['IMAGE', 'TEXT']
+            }
         }
 
-        if image_b64:
-            payload['image'] = image_b64
-
         try:
-            resp = requests.post(api_url, json=payload, headers=headers, timeout=120)
+            resp = requests.post(api_url, json=payload, headers=headers, timeout=180)
             resp.raise_for_status()
             res = resp.json()
         except requests.exceptions.RequestException as e:
@@ -362,43 +382,27 @@ def ai_nano_generate(request):
                 err_detail = resp.text if 'resp' in locals() else str(e)
             except Exception:
                 err_detail = str(e)
-            return JsonResponse({'status': 'error', 'message': f'Fallo de conexión con NanoBanana', 'detail': err_detail, 'url': api_url})
+            return JsonResponse({'status': 'error', 'message': f'Fallo de conexión con NanoBanana (Gemini)', 'detail': err_detail, 'url': api_url.split('?')[0]})
 
         image_url = None
-        if isinstance(res, dict):
-            image_url = res.get('image_url') or res.get('url') or res.get('imageUrl')
-            if not image_url:
-                data_res = res.get('data')
-                if isinstance(data_res, dict):
-                    image_url = data_res.get('image_url') or data_res.get('url') or data_res.get('imageUrl')
-                    b64 = data_res.get('image_base64') or data_res.get('b64') or data_res.get('image')
-                    if b64 and not image_url:
-                        image_bytes = base64.b64decode(b64)
-                        image_url = _save_generated_image(request, image_bytes, request.user.id)
-                        if not image_url:
-                            image_url = f"data:image/png;base64,{b64}"
-                elif isinstance(data_res, str):
-                    b64 = data_res
-                    image_bytes = base64.b64decode(b64)
-                    image_url = _save_generated_image(request, image_bytes, request.user.id)
-                    if not image_url:
-                        image_url = f"data:image/png;base64,{b64}"
-            else:
-                b64 = None
-                if isinstance(res.get('data'), dict):
-                    b64 = res['data'].get('image_base64') or res['data'].get('b64') or res['data'].get('image')
-                if not b64:
-                    b64 = res.get('image_base64') or res.get('b64') or res.get('image')
-                if b64 and isinstance(b64, str) and b64.startswith('data:image'):
-                    image_url = b64
-                elif b64 and isinstance(b64, str):
-                    try:
-                        image_bytes = base64.b64decode(b64)
-                        saved = _save_generated_image(request, image_bytes, request.user.id)
-                        if saved:
-                            image_url = saved
-                    except Exception:
-                        pass
+        try:
+            candidates = res.get('candidates') or []
+            if candidates:
+                content = candidates[0].get('content') or {}
+                parts_res = content.get('parts') or []
+                for p in parts_res:
+                    if p.get('inlineData'):
+                        b64 = p['inlineData'].get('data')
+                        if b64:
+                            image_bytes = base64.b64decode(b64)
+                            saved = _save_generated_image(request, image_bytes, request.user.id)
+                            if saved:
+                                image_url = saved
+                            else:
+                                image_url = f"data:image/png;base64,{b64}"
+                            break
+        except Exception:
+            pass
 
         if not image_url:
             return JsonResponse({'status': 'error', 'message': 'Respuesta inesperada de NanoBanana', 'raw': res})

@@ -164,4 +164,5 @@ ACCOUNT_LOGOUT_ON_GET = True
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 NANOBANANA_API_KEY = os.getenv('NANOBANANA_API_KEY', '')
-NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://api.nanobananaapi.ai/v1/generate')
+NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent')
+GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')

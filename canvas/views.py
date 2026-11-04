@@ -3,6 +3,7 @@ import base64
 import uuid
 import requests
 import time
+import os
 from io import BytesIO
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse

@@ -2,6 +2,7 @@ import json
 import base64
 import uuid
 import requests
+import time
 from io import BytesIO
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
@@ -14,6 +15,10 @@ from django.core.files.storage import default_storage
 from django.db.models import Max
 from .models import Drawing, Layer
 from .forms import DrawingForm
+try:
+    import replicate
+except Exception:
+    replicate = None
 
 @login_required
 def editor(request, drawing_id=None):
@@ -329,12 +334,42 @@ def ai_nano_generate(request):
     if not prompt and not image_b64:
         return JsonResponse({'status': 'error', 'message': 'Se requiere un prompt o una imagen'})
 
+    repl_key = getattr(settings, 'REPLICATE_API_TOKEN', '') or os.environ.get('REPLICATE_API_TOKEN', '')
+    if repl_key and replicate is not None:
+        try:
+            os.environ['REPLICATE_API_TOKEN'] = repl_key
+            client = replicate.Client(api_token=repl_key)
+            input_data = {'prompt': prompt}
+            if image_b64:
+                clean_b64 = image_b64
+                if isinstance(image_b64, str) and image_b64.startswith('data:'):
+                    clean_b64 = image_b64.split(',', 1)[1]
+                input_data['image_input'] = f'data:image/png;base64,{clean_b64}'
+            model = os.environ.get('REPLICATE_MODEL', 'google/nano-banana')
+            output = client.run(model, input=input_data)
+            image_url = None
+            if isinstance(output, list) and output:
+                o = output[0]
+                if isinstance(o, str):
+                    image_url = o
+                elif isinstance(o, dict):
+                    image_url = o.get('url')
+            elif isinstance(output, str):
+                image_url = output
+            elif isinstance(output, dict):
+                image_url = output.get('url') or (output.get('output') and output['output'][0] if isinstance(output.get('output'), list) else None)
+            if not image_url:
+                return JsonResponse({'status': 'error', 'message': 'Respuesta inesperada de Replicate', 'raw': output})
+            return JsonResponse({'status': 'ok', 'image_url': image_url})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Error con Replicate', 'detail': str(e)})
+
     api_key = getattr(settings, 'FAL_KEY', '') or getattr(settings, 'NANOBANANA_API_KEY', '') or os.environ.get('FAL_KEY', '') or os.environ.get('NANOBANANA_API_KEY', '')
     if not api_key:
         return JsonResponse({
             'status': 'error',
-            'message': 'No hay FAL_KEY/NANOBANANA_API_KEY configurada',
-            'hint': 'Añádela a tu archivo .env y reinicia el servidor'
+            'message': 'No hay API configurada',
+            'hint': 'Añade REPLICATE_API_TOKEN o FAL_KEY a tu .env'
         })
 
     api_url = getattr(settings, 'NANOBANANA_API_URL', '') or os.environ.get('NANOBANANA_API_URL', 'https://queue.fal.run/fal-ai/nano-banana')
@@ -367,7 +402,7 @@ def ai_nano_generate(request):
                 err_detail = resp.text if 'resp' in locals() else str(e)
             except Exception:
                 err_detail = str(e)
-            return JsonResponse({'status': 'error', 'message': f'Fallo de conexión con NanoBanana (Fal)', 'detail': err_detail, 'url': api_url})
+            return JsonResponse({'status': 'error', 'message': f'Fallo de conexión con NanoBanana', 'detail': err_detail, 'url': api_url})
 
         image_url = None
         if isinstance(res, dict):
@@ -392,7 +427,6 @@ def ai_nano_generate(request):
                     status_url = resp.headers.get('x-fal-queue-status-url') or f"https://queue.fal.run/fal-ai/nano-banana/requests/{res['request_id']}/status"
                     result_url = resp.headers.get('x-fal-queue-response-url') or f"https://queue.fal.run/fal-ai/nano-banana/requests/{res['request_id']}"
                     for _ in range(60):
-                        import time
                         time.sleep(2)
                         s = requests.get(status_url, headers=headers, timeout=30)
                         s.raise_for_status()
@@ -406,7 +440,7 @@ def ai_nano_generate(request):
                                 image_url = img.get('url') if isinstance(img, dict) else img
                             break
                 except Exception as ex:
-                    return JsonResponse({'status': 'error', 'message': 'Error esperando resultado Fal', 'detail': str(ex)})
+                    return JsonResponse({'status': 'error', 'message': 'Error esperando resultado', 'detail': str(ex)})
 
         if not image_url:
             return JsonResponse({'status': 'error', 'message': 'Respuesta inesperada de NanoBanana', 'raw': res})

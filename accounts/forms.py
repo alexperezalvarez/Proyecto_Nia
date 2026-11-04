@@ -5,8 +5,8 @@ from .models import Profile
 
 
 INPUT_ATTRS = {
-    'class': 'pf-input',
-    'autocomplete': 'off',
+    "class": "form-control",
+    "autocomplete": "off",
 }
 
 

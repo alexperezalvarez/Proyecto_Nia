@@ -337,7 +337,7 @@ def ai_nano_generate(request):
             'hint': 'Añádela a tu archivo .env y reinicia el servidor'
         })
 
-    api_url = getattr(settings, 'NANOBANANA_API_URL', '') or os.environ.get('NANOBANANA_API_URL', 'https://api.nanoapi.co/v1/generate')
+    api_url = getattr(settings, 'NANOBANANA_API_URL', '') or os.environ.get('NANOBANANA_API_URL', 'https://api.nanobananaapi.ai/v1/generate')
 
     try:
         headers = {

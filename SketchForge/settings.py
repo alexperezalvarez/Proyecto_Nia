@@ -164,4 +164,4 @@ ACCOUNT_LOGOUT_ON_GET = True
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
 NANOBANANA_API_KEY = os.getenv('NANOBANANA_API_KEY', '')
-NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://api.nanoapi.co/v1/generate')
+NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://api.nanobananaapi.ai/v1/generate')

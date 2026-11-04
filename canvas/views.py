@@ -343,8 +343,8 @@ def ai_nano_generate(request):
             payload = {'inputs': prompt}
             resp = None
             bases = [
-                'https://api-inference.huggingface.co/models',
                 'https://router.huggingface.co/hf-inference/models',
+                'https://api-inference.huggingface.co/models',
             ]
             for base in bases:
                 try:
@@ -352,7 +352,7 @@ def ai_nano_generate(request):
                     resp = requests.post(api_url, headers=headers, json=payload, timeout=300)
                     if resp is not None and resp.status_code not in (404, 410):
                         break
-                except Exception as ex:
+                except Exception:
                     resp = None
                     continue
             if resp is None:

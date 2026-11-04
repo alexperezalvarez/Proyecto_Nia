@@ -339,7 +339,7 @@ def ai_nano_generate(request):
     if hf_key and prompt:
         try:
             hf_model = getattr(settings, 'HF_MODEL', '') or os.environ.get('HF_MODEL', 'black-forest-labs/FLUX.1-dev')
-            api_url = f'https://api-inference.huggingface.co/models/{hf_model}'
+            api_url = os.environ.get('NANOBANANA_API_URL') or f'https://router.huggingface.co/hf-inference/models/{hf_model}'
             headers = {'Authorization': f'Bearer {hf_key}'}
             payload = {'inputs': prompt}
             resp = requests.post(api_url, headers=headers, json=payload, timeout=300)

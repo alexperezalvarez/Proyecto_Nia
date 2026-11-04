@@ -1,6 +1,7 @@
 import json
 import base64
 import uuid
+import requests
 from io import BytesIO
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
@@ -316,3 +317,90 @@ def ai_ideas(request):
                 f'💬 {prompt} - {style}. ¡Confía en tu creatividad y practica!'
             )
         return JsonResponse({'status': 'ok', 'ideas': ideas})
+
+
+@login_required
+@require_POST
+def ai_nano_generate(request):
+    data = json.loads(request.body)
+    prompt = data.get('prompt', '')
+    image_b64 = data.get('image') or data.get('image_base64')
+
+    if not prompt and not image_b64:
+        return JsonResponse({'status': 'error', 'message': 'Se requiere un prompt o una imagen'})
+
+    api_key = getattr(settings, 'NANOBANANA_API_KEY', '')
+    if not api_key:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'No hay NANOBANANA_API_KEY configurada',
+            'hint': 'Añádela a tu archivo .env'
+        })
+
+    api_url = getattr(settings, 'NANOBANANA_API_URL', 'https://api.nanoapi.co/v1/generate')
+
+    try:
+        headers = {
+            'Authorization': f'Bearer {api_key}',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        }
+
+        payload = {
+            'prompt': prompt,
+        }
+
+        if image_b64:
+            payload['image'] = image_b64
+
+        resp = requests.post(api_url, json=payload, headers=headers, timeout=120)
+        resp.raise_for_status()
+        res = resp.json()
+
+        image_url = None
+        if isinstance(res, dict):
+            image_url = res.get('image_url') or res.get('url') or res.get('imageUrl')
+            if not image_url:
+                data_res = res.get('data')
+                if isinstance(data_res, dict):
+                    image_url = data_res.get('image_url') or data_res.get('url') or data_res.get('imageUrl')
+                    b64 = data_res.get('image_base64') or data_res.get('b64') or data_res.get('image')
+                    if b64 and not image_url:
+                        image_bytes = base64.b64decode(b64)
+                        image_url = _save_generated_image(request, image_bytes, request.user.id)
+                        if not image_url:
+                            image_url = f"data:image/png;base64,{b64}"
+                elif isinstance(data_res, str):
+                    b64 = data_res
+                    image_bytes = base64.b64decode(b64)
+                    image_url = _save_generated_image(request, image_bytes, request.user.id)
+                    if not image_url:
+                        image_url = f"data:image/png;base64,{b64}"
+            else:
+                b64 = None
+                if isinstance(res.get('data'), dict):
+                    b64 = res['data'].get('image_base64') or res['data'].get('b64') or res['data'].get('image')
+                if not b64:
+                    b64 = res.get('image_base64') or res.get('b64') or res.get('image')
+                if b64 and isinstance(b64, str) and b64.startswith('data:image'):
+                    image_url = b64
+                elif b64 and isinstance(b64, str):
+                    try:
+                        image_bytes = base64.b64decode(b64)
+                        saved = _save_generated_image(request, image_bytes, request.user.id)
+                        if saved:
+                            image_url = saved
+                    except Exception:
+                        pass
+
+        if not image_url:
+            return JsonResponse({'status': 'error', 'message': 'Respuesta inesperada de NanoBanana', 'raw': res})
+
+        return JsonResponse({'status': 'ok', 'image_url': image_url})
+    except requests.exceptions.HTTPError as e:
+        try:
+            return JsonResponse({'status': 'error', 'message': f'Error HTTP: {e}', 'detail': resp.text})
+        except Exception:
+            return JsonResponse({'status': 'error', 'message': f'Error HTTP: {e}'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

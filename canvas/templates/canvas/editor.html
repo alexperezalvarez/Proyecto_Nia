@@ -363,6 +363,9 @@
                     <button class="ps-btn ps-btn-primary ps-btn-block" id="aiGenerateBtn">
                         <i class="bi bi-stars me-1"></i> Generar con IA
                     </button>
+                    <button class="ps-btn ps-btn-block mt-2" id="aiNanoBtn" style="background:linear-gradient(135deg,#7b61ff,#00e5ff);border:none;color:#04101a;font-weight:600">
+                        <i class="bi bi-stars me-1"></i> Generar con NanoBanana
+                    </button>
                     <div id="aiResult" class="mt-2"></div>
                 </div>
             </div>
@@ -493,6 +496,7 @@
     const EXPORT_URL = "{% url 'canvas:export_drawing' drawing.id %}";
     const THUMBNAIL_URL = "{% url 'canvas:upload_thumbnail' drawing.id %}";
     const AI_URL = "{% url 'canvas:ai_generate' %}";
+    const AI_NANO_URL = "{% url 'canvas:ai_nano_generate' %}";
     const CSRF_TOKEN = "{{ csrf_token }}";
 
     function togglePanel(header) {

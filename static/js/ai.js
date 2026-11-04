@@ -1,12 +1,18 @@
 const SketchForgeAI = {
     init() {
-        document.getElementById('aiGenerateBtn').addEventListener('click', () => this.generate());
-        document.getElementById('aiPrompt').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                this.generate();
-            }
-        });
+        const btnAi = document.getElementById('aiGenerateBtn');
+        if (btnAi) btnAi.addEventListener('click', () => this.generate());
+        const btnNano = document.getElementById('aiNanoBtn');
+        if (btnNano) btnNano.addEventListener('click', () => this.generateNano());
+        const promptEl = document.getElementById('aiPrompt');
+        if (promptEl) {
+            promptEl.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    this.generate();
+                }
+            });
+        }
     },
 
     generate() {
@@ -122,6 +128,67 @@ const SketchForgeAI = {
             },
             error: () => {
                 resultDiv.innerHTML = '<div style="background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.2);padding:6px 10px;border-radius:4px;font-size:11px;color:#f44336">Error de conexión</div>';
+            }
+        });
+    },
+
+    generateNano() {
+        const prompt = document.getElementById('aiPrompt').value.trim();
+        const resultDiv = document.getElementById('aiResult');
+
+        if (!prompt) {
+            resultDiv.innerHTML = '<div style="background:rgba(255,152,0,0.15);border:1px solid rgba(255,152,0,0.3);color:#ff9800;padding:6px 10px;border-radius:4px;font-size:11px">Escribe una descripción</div>';
+            return;
+        }
+
+        const btn = document.getElementById('aiNanoBtn');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generando...';
+        }
+
+        resultDiv.innerHTML = '<div style="text-align:center;padding:12px;color:var(--ps-text-dim);font-size:11px"><div class="spinner-border spinner-border-sm mb-1"></div><br>Generando con NanoBanana...</div>';
+
+        $.ajax({
+            url: typeof AI_NANO_URL !== 'undefined' ? AI_NANO_URL : '/canvas/ai-nano/',
+            method: 'POST',
+            headers: { 'X-CSRFToken': CSRF_TOKEN },
+            contentType: 'application/json',
+            data: JSON.stringify({ prompt: prompt }),
+            success: (resp) => {
+                if (resp.status === 'ok' && resp.image_url) {
+                    resultDiv.innerHTML = `
+                        <div style="position:relative">
+                            <img src="${resp.image_url}" alt="NanoBanana" style="width:100%;border-radius:4px;border:1px solid var(--ps-border-light)">
+                            <button class="ps-btn ps-btn-primary ps-btn-block mt-2 use-nano-btn" style="font-size:11px">
+                                <i class="bi bi-arrow-down-circle me-1"></i> Usar en Lienzo
+                            </button>
+                        </div>
+                    `;
+                    resultDiv.querySelector('.use-nano-btn').addEventListener('click', () => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = () => {
+                            if (typeof SketchForge !== 'undefined' && SketchForge.ctx) {
+                                SketchForge.ctx.drawImage(img, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+                                if (typeof SketchForge.saveState === 'function') SketchForge.saveState();
+                                if (typeof SketchForge.showToast === 'function') SketchForge.showToast('Imagen aplicada al lienzo', 'success');
+                            }
+                        };
+                        img.src = resp.image_url;
+                    });
+                } else {
+                    resultDiv.innerHTML = `<div style="background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.2);padding:6px 10px;border-radius:4px;font-size:11px;color:#f44336">Error: ${resp.message || 'Error al generar'}</div>`;
+                }
+            },
+            error: () => {
+                resultDiv.innerHTML = '<div style="background:rgba(244,67,54,0.1);border:1px solid rgba(244,67,54,0.2);padding:6px 10px;border-radius:4px;font-size:11px;color:#f44336">Error de conexión</div>';
+            },
+            complete: () => {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-stars me-1"></i> Generar con NanoBanana';
+                }
             }
         });
     }

@@ -163,3 +163,5 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_LOGOUT_ON_GET = True
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+NANOBANANA_API_KEY = os.getenv('NANOBANANA_API_KEY', '')
+NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://api.nanoapi.co/v1/generate')

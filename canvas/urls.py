@@ -16,4 +16,5 @@ urlpatterns = [
     path('export/<int:drawing_id>/', views.export_drawing, name='export_drawing'),
     path('ai-generate/', views.ai_generate, name='ai_generate'),
     path('ai-ideas/', views.ai_ideas, name='ai_ideas'),
+    path('ai-nano/', views.ai_nano_generate, name='ai_nano_generate'),
 ]

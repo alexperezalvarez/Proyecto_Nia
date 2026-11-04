@@ -339,14 +339,23 @@ def ai_nano_generate(request):
     if hf_key and prompt:
         try:
             hf_model = getattr(settings, 'HF_MODEL', '') or os.environ.get('HF_MODEL', 'black-forest-labs/FLUX.1-dev')
-            api_url = os.environ.get('NANOBANANA_API_URL') or f'https://api-inference.huggingface.co/models/{hf_model}'
             headers = {'Authorization': f'Bearer {hf_key}'}
             payload = {'inputs': prompt}
-            try:
-                resp = requests.post(api_url, headers=headers, json=payload, timeout=300)
-            except Exception:
-                api_url = f'https://router.huggingface.co/hf-inference/models/{hf_model}'
-                resp = requests.post(api_url, headers=headers, json=payload, timeout=300)
+            resp = None
+            for base in [
+                'https://router.huggingface.co/hf-inference/models',
+                'https://api-inference.huggingface.co/models',
+            ]:
+                try:
+                    api_url = f'{base}/{hf_model}'
+                    resp = requests.post(api_url, headers=headers, json=payload, timeout=300)
+                    if resp.status_code not in (404, 410, 503):
+                        break
+                except Exception:
+                    resp = None
+                    continue
+            if resp is None:
+                raise Exception('No HF endpoint reachable')
             if resp.status_code == 503:
                 try:
                     info = resp.json()
@@ -366,6 +375,10 @@ def ai_nano_generate(request):
                 res = resp.json()
                 if isinstance(res, list) and res and isinstance(res[0], dict) and res[0].get('url'):
                     return JsonResponse({'status': 'ok', 'image_url': res[0]['url']})
+                if isinstance(res, dict) and res.get('generated_images'):
+                    g = res['generated_images'][0]
+                    if isinstance(g, dict) and g.get('url'):
+                        return JsonResponse({'status': 'ok', 'image_url': g['url']})
             except Exception:
                 pass
             b64 = base64.b64encode(resp.content).decode('utf-8')
@@ -373,7 +386,7 @@ def ai_nano_generate(request):
             return JsonResponse({'status': 'ok', 'image_url': image_url})
         except requests.exceptions.HTTPError as e:
             try:
-                return JsonResponse({'status': 'error', 'message': f'Error HTTP HuggingFace: {e}', 'detail': resp.text})
+                return JsonResponse({'status': 'error', 'message': f'Error HTTP HuggingFace: {e}', 'detail': resp.text if 'resp' in locals() and resp else str(e)})
             except Exception:
                 return JsonResponse({'status': 'error', 'message': f'Error HTTP HuggingFace: {e}'})
         except Exception as e:

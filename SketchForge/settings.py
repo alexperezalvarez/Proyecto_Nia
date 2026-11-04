@@ -163,8 +163,10 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_LOGOUT_ON_GET = True
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-NANOBANANA_API_KEY = os.getenv('NANOBANANA_API_KEY', '') or os.getenv('FAL_KEY', '') or os.getenv('REPLICATE_API_TOKEN', '')
-NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://queue.fal.run/fal-ai/nano-banana')
+NANOBANANA_API_KEY = os.getenv('NANOBANANA_API_KEY', '') or os.getenv('FAL_KEY', '') or os.getenv('REPLICATE_API_TOKEN', '') or os.getenv('HUGGINGFACE_API_TOKEN', '')
+NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-dev')
 FAL_KEY = os.getenv('FAL_KEY', '') or os.getenv('NANOBANANA_API_KEY', '')
 REPLICATE_API_TOKEN = os.getenv('REPLICATE_API_TOKEN', '')
 REPLICATE_MODEL = os.getenv('REPLICATE_MODEL', 'google/nano-banana')
+HUGGINGFACE_API_TOKEN = os.getenv('HUGGINGFACE_API_TOKEN', '')
+HF_MODEL = os.getenv('HF_MODEL', 'black-forest-labs/FLUX.1-dev')

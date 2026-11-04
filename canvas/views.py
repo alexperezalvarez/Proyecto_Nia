@@ -335,8 +335,48 @@ def ai_nano_generate(request):
     if not prompt and not image_b64:
         return JsonResponse({'status': 'error', 'message': 'Se requiere un prompt o una imagen'})
 
+    hf_key = getattr(settings, 'HUGGINGFACE_API_TOKEN', '') or os.environ.get('HUGGINGFACE_API_TOKEN', '')
+    if hf_key and prompt:
+        try:
+            hf_model = getattr(settings, 'HF_MODEL', '') or os.environ.get('HF_MODEL', 'black-forest-labs/FLUX.1-dev')
+            api_url = f'https://api-inference.huggingface.co/models/{hf_model}'
+            headers = {'Authorization': f'Bearer {hf_key}'}
+            payload = {'inputs': prompt}
+            resp = requests.post(api_url, headers=headers, json=payload, timeout=300)
+            if resp.status_code == 503:
+                try:
+                    info = resp.json()
+                    return JsonResponse({'status': 'error', 'message': 'Modelo cargándose en HuggingFace, reintenta en 30-60 segundos', 'detail': info})
+                except Exception:
+                    return JsonResponse({'status': 'error', 'message': 'Modelo cargándose en HuggingFace, reintenta en 30-60 segundos'})
+            resp.raise_for_status()
+            ctype = resp.headers.get('content-type', '')
+            if 'image' in ctype:
+                image_bytes = resp.content
+                image_url = _save_generated_image(request, image_bytes, request.user.id)
+                if not image_url:
+                    b64 = base64.b64encode(image_bytes).decode('utf-8')
+                    image_url = f'data:{ctype};base64,{b64}'
+                return JsonResponse({'status': 'ok', 'image_url': image_url})
+            try:
+                res = resp.json()
+                if isinstance(res, list) and res and isinstance(res[0], dict) and res[0].get('url'):
+                    return JsonResponse({'status': 'ok', 'image_url': res[0]['url']})
+            except Exception:
+                pass
+            b64 = base64.b64encode(resp.content).decode('utf-8')
+            image_url = f'data:image/png;base64,{b64}'
+            return JsonResponse({'status': 'ok', 'image_url': image_url})
+        except requests.exceptions.HTTPError as e:
+            try:
+                return JsonResponse({'status': 'error', 'message': f'Error HTTP HuggingFace: {e}', 'detail': resp.text})
+            except Exception:
+                return JsonResponse({'status': 'error', 'message': f'Error HTTP HuggingFace: {e}'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Error HuggingFace', 'detail': str(e)})
+
     repl_key = getattr(settings, 'REPLICATE_API_TOKEN', '') or os.environ.get('REPLICATE_API_TOKEN', '')
-    if repl_key and replicate is not None:
+    if repl_key and replicate is not None and prompt:
         try:
             os.environ['REPLICATE_API_TOKEN'] = repl_key
             client = replicate.Client(api_token=repl_key)
@@ -358,7 +398,7 @@ def ai_nano_generate(request):
             elif isinstance(output, str):
                 image_url = output
             elif isinstance(output, dict):
-                image_url = output.get('url') or (output.get('output') and output['output'][0] if isinstance(output.get('output'), list) else None)
+                image_url = output.get('url')
             if not image_url:
                 return JsonResponse({'status': 'error', 'message': 'Respuesta inesperada de Replicate', 'raw': output})
             return JsonResponse({'status': 'ok', 'image_url': image_url})
@@ -370,7 +410,7 @@ def ai_nano_generate(request):
         return JsonResponse({
             'status': 'error',
             'message': 'No hay API configurada',
-            'hint': 'Añade REPLICATE_API_TOKEN o FAL_KEY a tu .env'
+            'hint': 'Añade HUGGINGFACE_API_TOKEN a tu .env'
         })
 
     api_url = getattr(settings, 'NANOBANANA_API_URL', '') or os.environ.get('NANOBANANA_API_URL', 'https://queue.fal.run/fal-ai/nano-banana')

@@ -329,15 +329,15 @@ def ai_nano_generate(request):
     if not prompt and not image_b64:
         return JsonResponse({'status': 'error', 'message': 'Se requiere un prompt o una imagen'})
 
-    api_key = getattr(settings, 'NANOBANANA_API_KEY', '')
+    api_key = getattr(settings, 'NANOBANANA_API_KEY', '') or os.environ.get('NANOBANANA_API_KEY', '')
     if not api_key:
         return JsonResponse({
             'status': 'error',
             'message': 'No hay NANOBANANA_API_KEY configurada',
-            'hint': 'Añádela a tu archivo .env'
+            'hint': 'Añádela a tu archivo .env y reinicia el servidor'
         })
 
-    api_url = getattr(settings, 'NANOBANANA_API_URL', 'https://api.nanoapi.co/v1/generate')
+    api_url = getattr(settings, 'NANOBANANA_API_URL', '') or os.environ.get('NANOBANANA_API_URL', 'https://api.nanoapi.co/v1/generate')
 
     try:
         headers = {
@@ -353,9 +353,16 @@ def ai_nano_generate(request):
         if image_b64:
             payload['image'] = image_b64
 
-        resp = requests.post(api_url, json=payload, headers=headers, timeout=120)
-        resp.raise_for_status()
-        res = resp.json()
+        try:
+            resp = requests.post(api_url, json=payload, headers=headers, timeout=120)
+            resp.raise_for_status()
+            res = resp.json()
+        except requests.exceptions.RequestException as e:
+            try:
+                err_detail = resp.text if 'resp' in locals() else str(e)
+            except Exception:
+                err_detail = str(e)
+            return JsonResponse({'status': 'error', 'message': f'Fallo de conexión con NanoBanana', 'detail': err_detail, 'url': api_url})
 
         image_url = None
         if isinstance(res, dict):

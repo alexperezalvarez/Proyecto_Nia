@@ -338,7 +338,7 @@ def ai_nano_generate(request):
     hf_key = getattr(settings, 'HUGGINGFACE_API_TOKEN', '') or os.environ.get('HUGGINGFACE_API_TOKEN', '')
     if hf_key and prompt:
         try:
-            hf_model = getattr(settings, 'HF_MODEL', '') or os.environ.get('HF_MODEL', 'black-forest-labs/FLUX.1-schnell')
+            hf_model = getattr(settings, 'HF_MODEL', '') or os.environ.get('HF_MODEL', 'ByteDance/SDXL-Lightning')
             headers = {'Authorization': f'Bearer {hf_key}'}
             payload = {'inputs': prompt}
             resp = None

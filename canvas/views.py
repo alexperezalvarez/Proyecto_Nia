@@ -343,8 +343,8 @@ def ai_nano_generate(request):
             payload = {'inputs': prompt}
             resp = None
             bases = [
-                'https://router.huggingface.co/models',
                 'https://router.huggingface.co/hf-inference/models',
+                'https://router.huggingface.co/models',
                 'https://api-inference.huggingface.co/models',
             ]
             for base in bases:

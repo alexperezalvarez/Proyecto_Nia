@@ -163,6 +163,6 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 ACCOUNT_LOGOUT_ON_GET = True
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
-NANOBANANA_API_KEY = os.getenv('NANOBANANA_API_KEY', '')
-NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent')
-GEMINI_IMAGE_MODEL = os.getenv('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
+NANOBANANA_API_KEY = os.getenv('NANOBANANA_API_KEY', '') or os.getenv('FAL_KEY', '')
+NANOBANANA_API_URL = os.getenv('NANOBANANA_API_URL', 'https://queue.fal.run/fal-ai/nano-banana')
+FAL_KEY = os.getenv('FAL_KEY', '') or os.getenv('NANOBANANA_API_KEY', '')

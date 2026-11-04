@@ -329,25 +329,26 @@ def ai_nano_generate(request):
     if not prompt and not image_b64:
         return JsonResponse({'status': 'error', 'message': 'Se requiere un prompt o una imagen'})
 
-    api_key = getattr(settings, 'NANOBANANA_API_KEY', '') or os.environ.get('NANOBANANA_API_KEY', '')
+    api_key = getattr(settings, 'FAL_KEY', '') or getattr(settings, 'NANOBANANA_API_KEY', '') or os.environ.get('FAL_KEY', '') or os.environ.get('NANOBANANA_API_KEY', '')
     if not api_key:
         return JsonResponse({
             'status': 'error',
-            'message': 'No hay NANOBANANA_API_KEY configurada',
+            'message': 'No hay FAL_KEY/NANOBANANA_API_KEY configurada',
             'hint': 'Añádela a tu archivo .env y reinicia el servidor'
         })
 
-    model = getattr(settings, 'GEMINI_IMAGE_MODEL', '') or os.environ.get('GEMINI_IMAGE_MODEL', 'gemini-2.5-flash-image')
-    api_url = f'https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}'
+    api_url = getattr(settings, 'NANOBANANA_API_URL', '') or os.environ.get('NANOBANANA_API_URL', 'https://queue.fal.run/fal-ai/nano-banana')
 
     try:
         headers = {
+            'Authorization': f'Key {api_key}',
             'Content-Type': 'application/json',
         }
 
-        parts = []
-        if prompt:
-            parts.append({'text': prompt})
+        payload = {
+            'prompt': prompt,
+        }
+
         if image_b64:
             clean_b64 = image_b64
             if isinstance(image_b64, str) and image_b64.startswith('data:'):
@@ -355,26 +356,10 @@ def ai_nano_generate(request):
                     clean_b64 = image_b64.split(',', 1)[1]
                 except Exception:
                     pass
-            parts.append({
-                'inlineData': {
-                    'mimeType': 'image/png',
-                    'data': clean_b64
-                }
-            })
-
-        payload = {
-            'contents': [
-                {
-                    'parts': parts
-                }
-            ],
-            'generationConfig': {
-                'responseModalities': ['IMAGE', 'TEXT']
-            }
-        }
+            payload['image_url'] = f'data:image/png;base64,{clean_b64}' if not str(image_b64).startswith('http') else image_b64
 
         try:
-            resp = requests.post(api_url, json=payload, headers=headers, timeout=180)
+            resp = requests.post(api_url, json=payload, headers=headers, timeout=300)
             resp.raise_for_status()
             res = resp.json()
         except requests.exceptions.RequestException as e:
@@ -382,27 +367,46 @@ def ai_nano_generate(request):
                 err_detail = resp.text if 'resp' in locals() else str(e)
             except Exception:
                 err_detail = str(e)
-            return JsonResponse({'status': 'error', 'message': f'Fallo de conexión con NanoBanana (Gemini)', 'detail': err_detail, 'url': api_url.split('?')[0]})
+            return JsonResponse({'status': 'error', 'message': f'Fallo de conexión con NanoBanana (Fal)', 'detail': err_detail, 'url': api_url})
 
         image_url = None
-        try:
-            candidates = res.get('candidates') or []
-            if candidates:
-                content = candidates[0].get('content') or {}
-                parts_res = content.get('parts') or []
-                for p in parts_res:
-                    if p.get('inlineData'):
-                        b64 = p['inlineData'].get('data')
-                        if b64:
-                            image_bytes = base64.b64decode(b64)
-                            saved = _save_generated_image(request, image_bytes, request.user.id)
-                            if saved:
-                                image_url = saved
-                            else:
-                                image_url = f"data:image/png;base64,{b64}"
+        if isinstance(res, dict):
+            if res.get('images') and isinstance(res['images'], list) and res['images']:
+                img = res['images'][0]
+                if isinstance(img, dict):
+                    image_url = img.get('url')
+                elif isinstance(img, str):
+                    image_url = img
+            if not image_url and res.get('image') and isinstance(res['image'], dict):
+                image_url = res['image'].get('url')
+            if not image_url and res.get('output') and isinstance(res['output'], dict):
+                images = res['output'].get('images')
+                if images and isinstance(images, list) and images:
+                    img = images[0]
+                    if isinstance(img, dict):
+                        image_url = img.get('url')
+                    elif isinstance(img, str):
+                        image_url = img
+            if not image_url and res.get('request_id'):
+                try:
+                    status_url = resp.headers.get('x-fal-queue-status-url') or f"https://queue.fal.run/fal-ai/nano-banana/requests/{res['request_id']}/status"
+                    result_url = resp.headers.get('x-fal-queue-response-url') or f"https://queue.fal.run/fal-ai/nano-banana/requests/{res['request_id']}"
+                    for _ in range(60):
+                        import time
+                        time.sleep(2)
+                        s = requests.get(status_url, headers=headers, timeout=30)
+                        s.raise_for_status()
+                        st = s.json()
+                        if st.get('status') == 'COMPLETED':
+                            r2 = requests.get(result_url, headers=headers, timeout=60)
+                            r2.raise_for_status()
+                            rj = r2.json()
+                            if rj.get('images') and rj['images']:
+                                img = rj['images'][0]
+                                image_url = img.get('url') if isinstance(img, dict) else img
                             break
-        except Exception:
-            pass
+                except Exception as ex:
+                    return JsonResponse({'status': 'error', 'message': 'Error esperando resultado Fal', 'detail': str(ex)})
 
         if not image_url:
             return JsonResponse({'status': 'error', 'message': 'Respuesta inesperada de NanoBanana', 'raw': res})

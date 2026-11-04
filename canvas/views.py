@@ -344,14 +344,12 @@ def ai_nano_generate(request):
             resp = None
             bases = [
                 'https://router.huggingface.co/hf-inference/models',
-                'https://router.huggingface.co/models',
-                'https://api-inference.huggingface.co/models',
             ]
             for base in bases:
                 try:
                     api_url = f'{base}/{hf_model}'
                     resp = requests.post(api_url, headers=headers, json=payload, timeout=300)
-                    if resp is not None and resp.status_code not in (404, 410):
+                    if resp is not None:
                         break
                 except Exception:
                     resp = None

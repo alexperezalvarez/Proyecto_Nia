@@ -4,6 +4,7 @@ import uuid
 import requests
 import time
 import os
+import urllib.parse
 from io import BytesIO
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
@@ -161,13 +162,78 @@ def export_drawing(request, drawing_id):
 
     return JsonResponse({'status': 'error', 'message': 'No hay datos de imagen'})
 
-def _save_generated_image(request, image_bytes, user_id):
-    pathname = f"ai/{user_id}/{uuid.uuid4().hex}.png"
+def _save_generated_image(request, image_bytes, user_id, ext='png'):
+    pathname = f"ai/{user_id}/{uuid.uuid4().hex}.{ext}"
     try:
         saved_name = default_storage.save(pathname, ContentFile(image_bytes))
         return request.build_absolute_uri(default_storage.url(saved_name))
     except Exception:
         return None
+
+
+def _pollinations_generate(request, prompt, image_b64=None):
+    if not prompt:
+        return JsonResponse({'status': 'error', 'message': 'Pollinations requiere una descripción de texto'})
+
+    base = getattr(settings, 'POLLINATIONS_API_URL', '') or os.environ.get('POLLINATIONS_API_URL', 'https://image.pollinations.ai/prompt')
+    base = base.rstrip('/')
+    model = getattr(settings, 'POLLINATIONS_MODEL', '') or os.environ.get('POLLINATIONS_MODEL', 'flux')
+    width = getattr(settings, 'POLLINATIONS_WIDTH', 1024)
+    height = getattr(settings, 'POLLINATIONS_HEIGHT', 1024)
+
+    url = f"{base}/{urllib.parse.quote(prompt)}"
+    params = {
+        'width': width,
+        'height': height,
+        'nologo': 'true',
+        'model': model,
+        'seed': int(time.time() * 1000) % 2147483647,
+    }
+
+    try:
+        headers = {
+            'User-Agent': 'SketchForge/1.0',
+            'Referer': 'https://sketchforge.art/',
+        }
+        resp = None
+        for attempt in range(3):
+            resp = requests.get(url, params=params, headers=headers, timeout=180)
+            if resp.status_code == 402:
+                return JsonResponse({
+                    'status': 'rate_limit',
+                    'message': 'Límite gratuito de Pollinations alcanzado (1 imagen cada 45 s). Espera un momento e inténtalo de nuevo.',
+                })
+            if resp.status_code == 429:
+                return JsonResponse({
+                    'status': 'rate_limit',
+                    'message': 'Pollinations está limitando las solicitudes. Espera unos segundos e inténtalo de nuevo.',
+                })
+            if resp.status_code < 500:
+                break
+            time.sleep(2)
+
+        resp.raise_for_status()
+        ctype = resp.headers.get('content-type', '')
+        if 'image' not in ctype:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Pollinations no devolvió una imagen',
+                'detail': resp.text[:300],
+            })
+
+        image_bytes = resp.content
+        ext = 'jpg' if 'jpeg' in ctype else 'png'
+        image_url = _save_generated_image(request, image_bytes, request.user.id, ext=ext)
+        if not image_url:
+            b64 = base64.b64encode(image_bytes).decode('utf-8')
+            image_url = f'data:{ctype};base64,{b64}'
+        return JsonResponse({'status': 'ok', 'image_url': image_url, 'provider': 'pollinations'})
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Error al generar con Pollinations',
+            'detail': str(e),
+        })
 
 
 @login_required
@@ -336,6 +402,13 @@ def ai_nano_generate(request):
         return JsonResponse({'status': 'error', 'message': 'Se requiere un prompt o una imagen'})
 
     hf_key = getattr(settings, 'HUGGINGFACE_API_TOKEN', '') or os.environ.get('HUGGINGFACE_API_TOKEN', '')
+    repl_key = getattr(settings, 'REPLICATE_API_TOKEN', '') or os.environ.get('REPLICATE_API_TOKEN', '')
+    fal_key = getattr(settings, 'FAL_KEY', '') or getattr(settings, 'NANOBANANA_API_KEY', '') or os.environ.get('FAL_KEY', '')
+    provider = (os.environ.get('IMAGE_PROVIDER') or getattr(settings, 'IMAGE_PROVIDER', '') or '').strip().lower()
+
+    if provider == 'pollinations' or (prompt and not (hf_key or repl_key or fal_key)):
+        return _pollinations_generate(request, prompt, image_b64)
+
     if hf_key and prompt:
         try:
             hf_model = getattr(settings, 'HF_MODEL', '') or os.environ.get('HF_MODEL', 'ByteDance/SDXL-Lightning')

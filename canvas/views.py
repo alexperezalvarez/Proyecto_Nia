@@ -182,21 +182,21 @@ def _image_ext(image_bytes, content_type=''):
 
 
 STYLE_PROMPTS = {
-    'digital-art': 'digital art, vibrant colors, high detail, polished illustration',
-    'sketch': 'pencil sketch, hand-drawn, black and white line art, rough shading, sketchbook style',
-    'watercolor': 'watercolor painting, soft washes, translucent colors, textured paper',
-    'oil-painting': 'oil painting, visible brush strokes, rich textures, classical fine art',
-    'anime': 'anime style, cel shading, clean outlines, japanese animation',
-    'pixel-art': 'pixel art, 8-bit, crisp pixels, retro video game style',
-    '3d-render': '3D render, CGI, volumetric lighting, octane render, high detail',
-    'flat-design': 'flat design, minimal vector illustration, simple shapes, solid colors',
+    'digital-art': 'digital painting artwork, detailed digital illustration, vibrant colors, dramatic lighting, not a photograph',
+    'sketch': 'black and white pencil sketch on paper, graphite line drawing, visible pencil strokes, rough hatching, hand-drawn, monochrome, no color, not a photograph',
+    'watercolor': 'watercolor painting on textured paper, translucent watercolor washes, soft blended edges, wet-on-wet, visible brush strokes, not a photograph',
+    'oil-painting': 'oil painting on canvas, thick impasto brush strokes, rich saturated colors, classical fine art painting, not a photograph',
+    'anime': 'anime illustration, cel shaded, bold clean black outlines, flat vibrant colors, japanese animation art style, not a photograph',
+    'pixel-art': 'pixel art sprite, 16-bit retro video game graphics, large visible square pixels, limited color palette, sharp pixel edges, not a photograph',
+    '3d-render': '3D CGI render, smooth shaded 3D model, realistic global illumination, soft shadows, octane render, studio lighting',
+    'flat-design': 'flat vector illustration, minimalist flat design, solid flat colors, simple geometric shapes, no gradients, no shadows, not a photograph',
 }
 
 
 def _apply_style(prompt, style):
     suffix = STYLE_PROMPTS.get((style or '').strip().lower())
     if suffix:
-        return f"{prompt}, {suffix}"
+        return f"{suffix}. Subject: {prompt}"
     return prompt
 
 

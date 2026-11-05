@@ -134,6 +134,7 @@ const SketchForgeAI = {
 
     generateNano() {
         const prompt = document.getElementById('aiPrompt').value.trim();
+        const style = document.getElementById('aiStyle') ? document.getElementById('aiStyle').value : '';
         const resultDiv = document.getElementById('aiResult');
 
         if (!prompt) {
@@ -154,7 +155,7 @@ const SketchForgeAI = {
             method: 'POST',
             headers: { 'X-CSRFToken': CSRF_TOKEN },
             contentType: 'application/json',
-            data: JSON.stringify({ prompt: prompt }),
+            data: JSON.stringify({ prompt: prompt, style: style }),
             success: (resp) => {
                 if (resp.status === 'ok' && resp.image_url) {
                     resultDiv.innerHTML = `

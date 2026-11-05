@@ -181,9 +181,30 @@ def _image_ext(image_bytes, content_type=''):
     return 'png'
 
 
-def _pollinations_generate(request, prompt, image_b64=None):
+STYLE_PROMPTS = {
+    'digital-art': 'digital art, vibrant colors, high detail, polished illustration',
+    'sketch': 'pencil sketch, hand-drawn, black and white line art, rough shading, sketchbook style',
+    'watercolor': 'watercolor painting, soft washes, translucent colors, textured paper',
+    'oil-painting': 'oil painting, visible brush strokes, rich textures, classical fine art',
+    'anime': 'anime style, cel shading, clean outlines, japanese animation',
+    'pixel-art': 'pixel art, 8-bit, crisp pixels, retro video game style',
+    '3d-render': '3D render, CGI, volumetric lighting, octane render, high detail',
+    'flat-design': 'flat design, minimal vector illustration, simple shapes, solid colors',
+}
+
+
+def _apply_style(prompt, style):
+    suffix = STYLE_PROMPTS.get((style or '').strip().lower())
+    if suffix:
+        return f"{prompt}, {suffix}"
+    return prompt
+
+
+def _pollinations_generate(request, prompt, image_b64=None, style=None):
     if not prompt:
         return JsonResponse({'status': 'error', 'message': 'Pollinations requiere una descripción de texto'})
+
+    prompt = _apply_style(prompt, style)
 
     token = getattr(settings, 'POLLINATIONS_TOKEN', '') or os.environ.get('POLLINATIONS_TOKEN', '')
     base = getattr(settings, 'POLLINATIONS_API_URL', '') or os.environ.get('POLLINATIONS_API_URL', 'https://gen.pollinations.ai')
@@ -291,17 +312,13 @@ def ai_generate(request):
 
     api_key = getattr(settings, 'OPENAI_API_KEY', '')
     if not api_key:
-        return JsonResponse({
-            'status': 'demo',
-            'message': 'Modo demostración - No hay API key configurada',
-            'hint': 'Configura OPENAI_API_KEY en .env para usar la generación por IA'
-        })
+        return _pollinations_generate(request, prompt, style=style)
 
     try:
         client = openai.OpenAI(api_key=api_key)
         response = client.images.generate(
             model="gpt-image-1",
-            prompt=f"{prompt}, estilo: {style}, arte digital",
+            prompt=_apply_style(prompt, style),
             size="1024x1024",
             quality="medium",
             n=1,
@@ -439,6 +456,7 @@ def ai_nano_generate(request):
     data = json.loads(request.body)
     prompt = data.get('prompt', '')
     image_b64 = data.get('image') or data.get('image_base64')
+    style = data.get('style', '')
 
     if not prompt and not image_b64:
         return JsonResponse({'status': 'error', 'message': 'Se requiere un prompt o una imagen'})
@@ -449,7 +467,7 @@ def ai_nano_generate(request):
     provider = (os.environ.get('IMAGE_PROVIDER') or getattr(settings, 'IMAGE_PROVIDER', '') or '').strip().lower()
 
     if provider == 'pollinations' or (prompt and not (hf_key or repl_key or fal_key)):
-        return _pollinations_generate(request, prompt, image_b64)
+        return _pollinations_generate(request, prompt, image_b64, style=style)
 
     if hf_key and prompt:
         try:

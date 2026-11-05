@@ -171,29 +171,71 @@ def _save_generated_image(request, image_bytes, user_id, ext='png'):
         return None
 
 
+def _image_ext(image_bytes, content_type=''):
+    if image_bytes[:8] == b'\x89PNG\r\n\x1a\n':
+        return 'png'
+    if image_bytes[:3] == b'\xff\xd8\xff' or 'jpeg' in content_type:
+        return 'jpg'
+    if image_bytes[:4] == b'RIFF' and image_bytes[8:12] == b'WEBP':
+        return 'webp'
+    return 'png'
+
+
 def _pollinations_generate(request, prompt, image_b64=None):
     if not prompt:
         return JsonResponse({'status': 'error', 'message': 'Pollinations requiere una descripción de texto'})
 
-    base = getattr(settings, 'POLLINATIONS_API_URL', '') or os.environ.get('POLLINATIONS_API_URL', 'https://image.pollinations.ai/prompt')
-    base = base.rstrip('/')
+    token = getattr(settings, 'POLLINATIONS_TOKEN', '') or os.environ.get('POLLINATIONS_TOKEN', '')
+    base = getattr(settings, 'POLLINATIONS_API_URL', '') or os.environ.get('POLLINATIONS_API_URL', 'https://gen.pollinations.ai')
+    classic = getattr(settings, 'POLLINATIONS_CLASSIC_URL', '') or os.environ.get('POLLINATIONS_CLASSIC_URL', 'https://image.pollinations.ai/prompt')
     model = getattr(settings, 'POLLINATIONS_MODEL', '') or os.environ.get('POLLINATIONS_MODEL', 'flux')
     width = getattr(settings, 'POLLINATIONS_WIDTH', 1024)
     height = getattr(settings, 'POLLINATIONS_HEIGHT', 1024)
 
-    url = f"{base}/{urllib.parse.quote(prompt)}"
-    params = {
-        'width': width,
-        'height': height,
-        'nologo': 'true',
-        'model': model,
-        'seed': int(time.time() * 1000) % 2147483647,
+    headers = {
+        'User-Agent': 'SketchForge/1.0',
+        'Referer': 'https://sketchforge.art/',
     }
 
     try:
-        headers = {
-            'User-Agent': 'SketchForge/1.0',
-            'Referer': 'https://sketchforge.art/',
+        if token:
+            url = f"{base.rstrip('/')}/v1/images/generations"
+            headers['Authorization'] = f'Bearer {token}'
+            payload = {
+                'prompt': prompt,
+                'model': model,
+                'size': f'{width}x{height}',
+                'n': 1,
+            }
+            resp = requests.post(url, headers=headers, json=payload, timeout=180)
+            if resp.status_code == 401:
+                return JsonResponse({'status': 'error', 'message': 'La API key de Pollinations es inválida o fue revocada'})
+            if resp.status_code == 402:
+                return JsonResponse({'status': 'rate_limit', 'message': 'Saldo de Pollen agotado en Pollinations. Recarga en enter.pollinations.ai'})
+            if resp.status_code == 429:
+                return JsonResponse({'status': 'rate_limit', 'message': 'Pollinations está limitando las solicitudes. Espera unos segundos e inténtalo de nuevo.'})
+            resp.raise_for_status()
+
+            data = resp.json()
+            item = (data.get('data') or [{}])[0] if isinstance(data, dict) else {}
+            if item.get('url'):
+                return JsonResponse({'status': 'ok', 'image_url': item['url'], 'provider': 'pollinations'})
+            if item.get('b64_json'):
+                image_bytes = base64.b64decode(item['b64_json'])
+                ext = _image_ext(image_bytes, 'image/jpeg')
+                image_url = _save_generated_image(request, image_bytes, request.user.id, ext=ext)
+                if not image_url:
+                    image_url = f'data:image/{ext};base64,{item["b64_json"]}'
+                return JsonResponse({'status': 'ok', 'image_url': image_url, 'provider': 'pollinations'})
+            return JsonResponse({'status': 'error', 'message': 'Respuesta inesperada de Pollinations', 'detail': str(data)[:300]})
+
+        url = f"{classic.rstrip('/')}/{urllib.parse.quote(prompt)}"
+        params = {
+            'width': width,
+            'height': height,
+            'nologo': 'true',
+            'model': model,
+            'seed': int(time.time() * 1000) % 2147483647,
         }
         resp = None
         for attempt in range(3):
@@ -222,7 +264,7 @@ def _pollinations_generate(request, prompt, image_b64=None):
             })
 
         image_bytes = resp.content
-        ext = 'jpg' if 'jpeg' in ctype else 'png'
+        ext = _image_ext(image_bytes, ctype)
         image_url = _save_generated_image(request, image_bytes, request.user.id, ext=ext)
         if not image_url:
             b64 = base64.b64encode(image_bytes).decode('utf-8')

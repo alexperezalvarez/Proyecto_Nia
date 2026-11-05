@@ -1,7 +1,5 @@
 const SketchForgeAI = {
     init() {
-        const btnAi = document.getElementById('aiGenerateBtn');
-        if (btnAi) btnAi.addEventListener('click', () => this.generate());
         const btnNano = document.getElementById('aiNanoBtn');
         if (btnNano) btnNano.addEventListener('click', () => this.generateNano());
         const promptEl = document.getElementById('aiPrompt');
@@ -9,7 +7,7 @@ const SketchForgeAI = {
             promptEl.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    this.generate();
+                    this.generateNano();
                 }
             });
         }
@@ -148,7 +146,7 @@ const SketchForgeAI = {
             btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Generando...';
         }
 
-        resultDiv.innerHTML = '<div style="text-align:center;padding:12px;color:var(--ps-text-dim);font-size:11px"><div class="spinner-border spinner-border-sm mb-1"></div><br>Generando con NanoBanana...</div>';
+        resultDiv.innerHTML = '<div style="text-align:center;padding:12px;color:var(--ps-text-dim);font-size:11px"><div class="spinner-border spinner-border-sm mb-1"></div><br>Generando imagen...</div>';
 
         $.ajax({
             url: typeof AI_NANO_URL !== 'undefined' ? AI_NANO_URL : '/canvas/ai-nano/',
@@ -160,7 +158,7 @@ const SketchForgeAI = {
                 if (resp.status === 'ok' && resp.image_url) {
                     resultDiv.innerHTML = `
                         <div style="position:relative">
-                            <img src="${resp.image_url}" alt="NanoBanana" style="width:100%;border-radius:4px;border:1px solid var(--ps-border-light)">
+                            <img src="${resp.image_url}" alt="Imagen generada" style="width:100%;border-radius:4px;border:1px solid var(--ps-border-light)">
                             <button class="ps-btn ps-btn-primary ps-btn-block mt-2 use-nano-btn" style="font-size:11px">
                                 <i class="bi bi-arrow-down-circle me-1"></i> Usar en Lienzo
                             </button>
@@ -188,7 +186,7 @@ const SketchForgeAI = {
             complete: () => {
                 if (btn) {
                     btn.disabled = false;
-                    btn.innerHTML = '<i class="bi bi-stars me-1"></i> Generar con NanoBanana';
+                    btn.innerHTML = '<i class="bi bi-stars me-1"></i> Generar imagen';
                 }
             }
         });
